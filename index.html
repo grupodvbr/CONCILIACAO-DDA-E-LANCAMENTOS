@@ -98,7 +98,10 @@
         const valor = parseFloat(String(valorRaw).toString().replace(",", "."));
 
         if (nomeFornecedor && !isNaN(valor)) {
-          lista.push({ fornecedor: nomeFornecedor, valor: valor.toFixed(2) });
+          const nomeLimpo = nomeFornecedor.replace(/[^A-Z0-9\s]/gi, '').trim();
+          if (nomeLimpo.length > 2) {
+            lista.push({ fornecedor: nomeLimpo.toUpperCase(), valor: valor.toFixed(2) });
+          }
         }
       }
       callback(lista);
