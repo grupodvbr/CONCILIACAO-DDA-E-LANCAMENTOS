@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Conciliação DDA x Contas a Pagar</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
   <style>
     body {
@@ -127,46 +126,36 @@
 </div>
 
 <script>
-  async function executarOCR(file) {
+  async function lerTextoDoPDF(file) {
     const reader = new FileReader();
     return new Promise((resolve, reject) => {
-      reader.onload = async function () {
-        const pdfData = new Uint8Array(reader.result);
-        const image = await pdfToImage(pdfData);
-        const { createWorker } = Tesseract;
-        const worker = await createWorker();
-        await worker.loadLanguage('por');
-        await worker.initialize('por');
-        const { data: { text } } = await worker.recognize(image);
-        await worker.terminate();
-        resolve(text);
+      reader.onload = function () {
+        const typedArray = new Uint8Array(reader.result);
+        pdfjsLib.getDocument({ data: typedArray }).promise.then(async pdf => {
+          let textoCompleto = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const strings = content.items.map(item => item.str);
+            textoCompleto += strings.join('\n') + '\n';
+          }
+          resolve(textoCompleto);
+        });
       };
       reader.onerror = reject;
       reader.readAsArrayBuffer(file);
     });
   }
 
-  async function pdfToImage(pdfData) {
-    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 2 });
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-    await page.render({ canvasContext: context, viewport }).promise;
-    return canvas;
-  }
-
-  function extrairLinhasValidas(textoOCR) {
-    const linhas = textoOCR.split('\n');
-    const padrao = /(.+?)\s+(\d{2}\/\d{2}\/\d{4})\s+([\d.,]+)/;
+  function extrairLinhasValidas(texto) {
+    const linhas = texto.split('\n');
+    const padrao = /(.+?)\s+\d{2}\/\d{2}\/\d{4}\s+([\d.,]+)/;
     const resultado = [];
     for (let linha of linhas) {
       const match = linha.match(padrao);
       if (match) {
         const fornecedor = match[1].trim().replace(/[^A-Z0-9 \-\.]/gi, '').toUpperCase();
-        const valor = parseFloat(match[3].replace('.', '').replace(',', '.'));
+        const valor = parseFloat(match[2].replace('.', '').replace(',', '.'));
         if (!isNaN(valor)) {
           resultado.push({ fornecedor, valor: valor.toFixed(2) });
         }
@@ -199,9 +188,10 @@
     const fileContas = document.getElementById('contas').files[0];
     const fileDDA = document.getElementById('ddaPdf').files[0];
     if (!fileContas || !fileDDA) return alert("Selecione os dois arquivos.");
-    document.getElementById("resultado").innerHTML = "<p>Executando OCR no PDF... aguarde.</p>";
-    const textoOCR = await executarOCR(fileDDA);
-    const dadosDDA = extrairLinhasValidas(textoOCR);
+    document.getElementById("resultado").innerHTML = "<p>Lendo PDF... aguarde.</p>";
+
+    const textoPDF = await lerTextoDoPDF(fileDDA);
+    const dadosDDA = extrairLinhasValidas(textoPDF);
 
     lerContas(fileContas, dadosContas => {
       const chavesContas = dadosContas.map(e => e.fornecedor + "|" + e.valor);
