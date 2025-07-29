@@ -10,9 +10,7 @@
       background: #f5f5f5;
       padding: 30px;
     }
-    h1 {
-      text-align: center;
-    }
+    h1 { text-align: center; }
     .input-group {
       display: flex;
       justify-content: center;
@@ -54,7 +52,7 @@
     <input type="file" id="contas" accept=".xlsx,.xls" />
   </div>
   <div>
-    <label><strong>DDA (.xlsx)</strong></label><br>
+    <label><strong>DDA (.xlsx exportado do PDF)</strong></label><br>
     <input type="file" id="dda" accept=".xlsx,.xls" />
   </div>
   <button onclick="conciliar()">Comparar</button>
@@ -65,44 +63,45 @@
 <script>
   function lerContas(file, callback) {
     const reader = new FileReader();
-    reader.onload = function (e) {
-      const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    reader.onload = e => {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      const resultados = [];
+      const lista = [];
       for (let i = 10; i < data.length; i++) {
         const linha = data[i];
-        if (!linha || linha.length < 9) continue;
         const fornecedor = (linha[4] || "").toString().trim().toUpperCase();
         const valor = parseFloat(linha[8]);
         if (fornecedor && !isNaN(valor)) {
-          resultados.push({ fornecedor, valor: valor.toFixed(2) });
+          lista.push({ fornecedor, valor: valor.toFixed(2) });
         }
       }
-      callback(resultados);
+      callback(lista);
     };
     reader.readAsArrayBuffer(file);
   }
 
   function lerDDA(file, callback) {
     const reader = new FileReader();
-    reader.onload = function (e) {
-      const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    reader.onload = e => {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      const resultados = [];
+      const lista = [];
       for (let i = 0; i < data.length; i++) {
-        const linha = data[i];
-        if (!linha || linha.length < 2) continue;
-        const fornecedor = (linha[0] || "").toString().trim().toUpperCase();
-        const valor = parseFloat(linha[linha.length - 1]);
-        if (fornecedor && !isNaN(valor)) {
-          resultados.push({ fornecedor, valor: valor.toFixed(2) });
+        const linha = data[i].filter(c => c !== undefined && c !== null);
+        const valorRaw = linha[linha.length - 1];
+        const vencimentoRaw = linha[linha.length - 2];
+        const nomeFornecedor = linha.slice(0, linha.length - 2).join(" ").trim().toUpperCase();
+        const valor = parseFloat(String(valorRaw).toString().replace(",", "."));
+
+        if (nomeFornecedor && !isNaN(valor)) {
+          lista.push({ fornecedor: nomeFornecedor, valor: valor.toFixed(2) });
         }
       }
-      callback(resultados);
+      callback(lista);
     };
     reader.readAsArrayBuffer(file);
   }
@@ -116,32 +115,28 @@
       return;
     }
 
-    lerContas(fileContas, dadosContas => {
-      lerDDA(fileDDA, dadosDDA => {
-        const chavesContas = dadosContas.map(item => item.fornecedor + "|" + item.valor);
-        const chavesDDA = dadosDDA.map(item => item.fornecedor + "|" + item.valor);
-
+    lerContas(fileContas, contas => {
+      lerDDA(fileDDA, dda => {
+        const chavesContas = contas.map(e => e.fornecedor + "|" + e.valor);
+        const chavesDDA = dda.map(e => e.fornecedor + "|" + e.valor);
         const todasChaves = new Set([...chavesContas, ...chavesDDA]);
 
-        let html = `<table>
-          <tr><th>Fornecedor</th><th>Valor</th><th>Status</th></tr>`;
-
+        let html = "<table><tr><th>Fornecedor</th><th>Valor</th><th>Status</th></tr>";
         todasChaves.forEach(chave => {
           const [fornecedor, valor] = chave.split("|");
           const emContas = chavesContas.includes(chave);
           const emDDA = chavesDDA.includes(chave);
-          let status = '';
-          let classe = '';
+          let status = "", classe = "";
 
           if (emContas && emDDA) {
-            status = '✔ OK';
-            classe = 'match';
+            status = "✔ OK";
+            classe = "match";
           } else if (emContas) {
-            status = '✖ SÓ CONTAS';
-            classe = 'mismatch';
+            status = "✖ SÓ CONTAS";
+            classe = "mismatch";
           } else {
-            status = '✖ SÓ DDA';
-            classe = 'mismatch';
+            status = "✖ SÓ DDA";
+            classe = "mismatch";
           }
 
           html += `<tr class="${classe}">
@@ -150,7 +145,6 @@
             <td>${status}</td>
           </tr>`;
         });
-
         html += "</table>";
         document.getElementById("resultado").innerHTML = html;
       });
