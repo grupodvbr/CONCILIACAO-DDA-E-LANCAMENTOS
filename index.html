@@ -2,73 +2,118 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Conciliação DDA (PDF) x Contas a Pagar (Excel)</title>
+  <title>Conciliação DDA x Contas a Pagar</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 30px;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 0;
     }
-    h1 {
+
+    header {
+      background-color: #004085;
+      color: white;
+      padding: 20px;
       text-align: center;
+      font-size: 1.6em;
+      font-weight: bold;
     }
+
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
     .input-group {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      justify-content: center;
       margin-bottom: 20px;
+      justify-content: space-between;
     }
-    input[type="file"], button {
+
+    input[type="file"], button, input[type="text"] {
       padding: 10px;
       font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
     }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 30px;
+      margin-top: 20px;
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
+
+    th {
+      background-color: #004085;
+      color: white;
+      padding: 10px;
+    }
+
+    td {
+      padding: 10px;
       text-align: center;
     }
-    .match {
-      background-color: #d4edda;
-      color: #155724;
-    }
-    .mismatch {
-      background-color: #f8d7da;
-      color: #721c24;
+
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    .match { background-color: #d4edda; color: #155724; }
+    .mismatch { background-color: #f8d7da; color: #721c24; }
+
+    #searchBox {
+      width: 100%;
+      margin-top: 20px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
 
-<h1>Conciliação DDA (PDF) x Contas a Pagar (Excel)</h1>
+<header>Conciliação DDA (PDF) x Contas a Pagar (Excel)</header>
 
-<div class="input-group">
-  <div>
-    <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
-    <input type="file" id="contas" accept=".xlsx,.xls">
+<div class="container">
+  <div class="input-group">
+    <div style="flex: 1">
+      <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
+      <input type="file" id="contas" accept=".xlsx,.xls">
+    </div>
+    <div style="flex: 1">
+      <label><strong>DDA (PDF)</strong></label><br>
+      <input type="file" id="ddaPdf" accept=".pdf">
+    </div>
+    <div style="display: flex; align-items: flex-end">
+      <button onclick="executarConciliacao()">Conciliar</button>
+    </div>
   </div>
-  <div>
-    <label><strong>DDA (PDF)</strong></label><br>
-    <input type="file" id="ddaPdf" accept=".pdf">
-  </div>
-  <div>
-    <button onclick="executarConciliacao()">Conciliar</button>
-  </div>
+
+  <input type="text" id="searchBox" placeholder="Pesquisar por fornecedor ou valor..." oninput="filtrarTabela()">
+  <div id="resultado"></div>
 </div>
-
-<div id="resultado"></div>
 
 <script>
   async function executarOCR(file) {
-    const worker = await Tesseract.createWorker("por");
-    const { data: { text } } = await worker.recognize(file);
+    const { createWorker } = Tesseract;
+    const worker = await createWorker({ logger: m => console.log(m) });
+    await worker.loadLanguage('por');
+    await worker.initialize('por');
+    const { data: { text } } = await worker.recognize(file, { tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK });
     await worker.terminate();
     return text;
   }
@@ -81,7 +126,6 @@
       const match = linha.match(padrao);
       if (match) {
         const fornecedor = match[1].trim().replace(/[^A-Z0-9 \-\.]/gi, '').toUpperCase();
-        const vencimento = match[2];
         const valor = parseFloat(match[3].replace('.', '').replace(',', '.'));
         if (!isNaN(valor)) {
           resultado.push({ fornecedor, valor: valor.toFixed(2) });
@@ -97,7 +141,6 @@
       const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
       const lista = [];
       for (let i = 10; i < data.length; i++) {
         const linha = data[i];
@@ -115,12 +158,7 @@
   async function executarConciliacao() {
     const fileContas = document.getElementById('contas').files[0];
     const fileDDA = document.getElementById('ddaPdf').files[0];
-
-    if (!fileContas || !fileDDA) {
-      alert("Selecione os dois arquivos.");
-      return;
-    }
-
+    if (!fileContas || !fileDDA) return alert("Selecione os dois arquivos.");
     document.getElementById("resultado").innerHTML = "<p>Executando OCR no PDF... aguarde.</p>";
     const textoOCR = await executarOCR(fileDDA);
     const dadosDDA = extrairLinhasValidas(textoOCR);
@@ -129,29 +167,29 @@
       const chavesContas = dadosContas.map(e => e.fornecedor + "|" + e.valor);
       const chavesDDA = dadosDDA.map(e => e.fornecedor + "|" + e.valor);
       const todasChaves = new Set([...chavesContas, ...chavesDDA]);
-
-      let html = "<table><tr><th>Fornecedor</th><th>Valor</th><th>Status</th></tr>";
+      let html = "<table id='tabela'><tr><th>Fornecedor</th><th>Valor</th><th>Status</th></tr>";
       todasChaves.forEach(chave => {
         const [fornecedor, valor] = chave.split("|");
         const emContas = chavesContas.includes(chave);
         const emDDA = chavesDDA.includes(chave);
-        let status = '', classe = '';
-        if (emContas && emDDA) {
-          status = "✔ OK";
-          classe = "match";
-        } else if (emContas) {
-          status = "✖ SÓ CONTAS";
-          classe = "mismatch";
-        } else {
-          status = "✖ SÓ DDA";
-          classe = "mismatch";
-        }
-        html += `<tr class="${classe}"><td>${fornecedor}</td><td>${parseFloat(valor).toFixed(2)}</td><td>${status}</td></tr>`;
+        const status = emContas && emDDA ? "✔ OK" : emContas ? "✖ SÓ CONTAS" : "✖ SÓ DDA";
+        const classe = emContas && emDDA ? "match" : "mismatch";
+        html += `<tr class="${classe}"><td>${fornecedor}</td><td>${valor}</td><td>${status}</td></tr>`;
       });
       html += "</table>";
       document.getElementById("resultado").innerHTML = html;
     });
   }
+
+  function filtrarTabela() {
+    const termo = document.getElementById("searchBox").value.toLowerCase();
+    const linhas = document.querySelectorAll("#tabela tr");
+    for (let i = 1; i < linhas.length; i++) {
+      const texto = linhas[i].innerText.toLowerCase();
+      linhas[i].style.display = texto.includes(termo) ? "" : "none";
+    }
+  }
 </script>
+
 </body>
 </html>
