@@ -109,13 +109,34 @@
 
 <script>
   async function executarOCR(file) {
-    const { createWorker } = Tesseract;
-    const worker = await createWorker({ logger: m => console.log(m) });
-    await worker.loadLanguage('por');
-    await worker.initialize('por');
-    const { data: { text } } = await worker.recognize(file, { tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK });
-    await worker.terminate();
-    return text;
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onload = async function () {
+        const pdfData = new Uint8Array(reader.result);
+        const image = await pdfToImage(pdfData);
+        const { createWorker } = Tesseract;
+        const worker = await createWorker();
+        await worker.loadLanguage('por');
+        await worker.initialize('por');
+        const { data: { text } } = await worker.recognize(image);
+        await worker.terminate();
+        resolve(text);
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async function pdfToImage(pdfData) {
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    await page.render({ canvasContext: context, viewport }).promise;
+    return canvas;
   }
 
   function extrairLinhasValidas(textoOCR) {
@@ -190,6 +211,6 @@
     }
   }
 </script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
 </body>
 </html>
