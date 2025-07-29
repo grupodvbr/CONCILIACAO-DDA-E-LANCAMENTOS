@@ -151,23 +151,19 @@
     const linhas = texto.split('\n');
     const resultado = [];
 
-    const padraoDataValor = /^(\d{2}\/\d{2}\/\d{4})\s+([\d.]+,\d{2})$/;
+    const padrao = /^(.*)\s+(\d{2}\/\d{2}\/\d{4})\s+([\d.]+,\d{2})$/;
 
-    for (let i = 0; i < linhas.length - 1; i++) {
-      const linha1 = linhas[i].trim();
-      const linha2 = linhas[i + 1].trim();
-
-      const match = linha2.match(padraoDataValor);
+    for (let linha of linhas) {
+      const match = linha.trim().match(padrao);
       if (match) {
-        const fornecedor = linha1
-          .replace(/[^A-Z0-9 \-\.]/gi, '')
+        const fornecedor = match[1]
+          .replace(/[^\w\s\-\.]/gi, '')
           .replace(/\s{2,}/g, ' ')
+          .trim()
           .toUpperCase();
-        const valor = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
-
+        const valor = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
         if (!isNaN(valor)) {
           resultado.push({ fornecedor, valor: valor.toFixed(2) });
-          i++; // pula a linha de valor já usada
         }
       }
     }
@@ -223,13 +219,4 @@
   }
 
   function filtrarTabela() {
-    const termo = document.getElementById("searchBox").value.toLowerCase();
-    const linhas = document.querySelectorAll("#tabela tr");
-    for (let i = 1; i < linhas.length; i++) {
-      const texto = linhas[i].innerText.toLowerCase();
-      linhas[i].style.display = texto.includes(termo) ? "" : "none";
-    }
-  }
-</script>
-</body>
-</html>
+    const termo = document.getElementById("searchBox").value.toLowerCa
