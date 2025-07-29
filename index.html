@@ -20,13 +20,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 20px;
-      font-size: 1.6em;
-      font-weight: bold;
+      position: relative;
     }
 
     header img {
       height: 50px;
+      position: absolute;
+      left: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .header-title {
+      font-size: 1.6em;
+      font-weight: bold;
     }
 
     .container {
@@ -95,7 +102,7 @@
 
 <header>
   <img src="7786df39-c3c5-407f-8b43-a96a5349ab1a.png" alt="Logo">
-  Conciliação DDA (PDF) x Contas a Pagar (Excel)
+  <div class="header-title">Conciliação DDA (PDF) x Contas a Pagar (Excel)</div>
 </header>
 
 <div class="container">
