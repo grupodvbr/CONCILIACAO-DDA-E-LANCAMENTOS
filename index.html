@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Conciliação de Arquivos Excel</title>
+  <meta charset="UTF-8" />
+  <title>Conciliação DDA x Contas a Pagar</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 30px;
       background: #f5f5f5;
+      padding: 30px;
     }
     h1 {
       text-align: center;
@@ -17,8 +17,8 @@
       display: flex;
       justify-content: center;
       gap: 20px;
-      margin-bottom: 20px;
       flex-wrap: wrap;
+      margin-bottom: 20px;
     }
     input[type="file"], button {
       padding: 10px;
@@ -30,8 +30,8 @@
       margin-top: 30px;
     }
     th, td {
-      padding: 8px;
       border: 1px solid #ccc;
+      padding: 8px;
       text-align: center;
     }
     .match {
@@ -46,71 +46,108 @@
 </head>
 <body>
 
-<h1>Sistema de Conciliação - Excel</h1>
+<h1>Conciliação DDA x Contas a Pagar</h1>
 
 <div class="input-group">
   <div>
-    <label><strong>Arquivo 1 (.xlsx)</strong></label><br>
-    <input type="file" id="file1" accept=".xlsx,.xls">
+    <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
+    <input type="file" id="contas" accept=".xlsx,.xls" />
   </div>
   <div>
-    <label><strong>Arquivo 2 (.xlsx)</strong></label><br>
-    <input type="file" id="file2" accept=".xlsx,.xls">
+    <label><strong>DDA (.xlsx)</strong></label><br>
+    <input type="file" id="dda" accept=".xlsx,.xls" />
   </div>
-  <div>
-    <button onclick="comparar()">Comparar</button>
-  </div>
+  <button onclick="conciliar()">Comparar</button>
 </div>
 
 <div id="resultado"></div>
 
 <script>
-  function lerExcel(file, callback) {
+  function lerContas(file, callback) {
     const reader = new FileReader();
     reader.onload = function (e) {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
+      const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const dados = {};
-      for (let i = 1; i < json.length; i++) {
-        const linha = json[i];
-        if (linha && linha.length >= 2) {
-          const chave = String(linha[0]).trim();
-          const valor = parseFloat(linha[1]);
-          if (!isNaN(valor)) {
-            dados[chave] = valor;
-          }
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      const resultados = [];
+      for (let i = 10; i < data.length; i++) {
+        const linha = data[i];
+        if (!linha || linha.length < 9) continue;
+        const fornecedor = (linha[4] || "").toString().trim().toUpperCase();
+        const valor = parseFloat(linha[8]);
+        if (fornecedor && !isNaN(valor)) {
+          resultados.push({ fornecedor, valor: valor.toFixed(2) });
         }
       }
-      callback(dados);
+      callback(resultados);
     };
     reader.readAsArrayBuffer(file);
   }
 
-  function comparar() {
-    const file1 = document.getElementById("file1").files[0];
-    const file2 = document.getElementById("file2").files[0];
+  function lerDDA(file, callback) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    if (!file1 || !file2) {
-      alert("Selecione os dois arquivos Excel.");
+      const resultados = [];
+      for (let i = 0; i < data.length; i++) {
+        const linha = data[i];
+        if (!linha || linha.length < 2) continue;
+        const fornecedor = (linha[0] || "").toString().trim().toUpperCase();
+        const valor = parseFloat(linha[linha.length - 1]);
+        if (fornecedor && !isNaN(valor)) {
+          resultados.push({ fornecedor, valor: valor.toFixed(2) });
+        }
+      }
+      callback(resultados);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function conciliar() {
+    const fileContas = document.getElementById('contas').files[0];
+    const fileDDA = document.getElementById('dda').files[0];
+
+    if (!fileContas || !fileDDA) {
+      alert("Selecione os dois arquivos.");
       return;
     }
 
-    lerExcel(file1, dados1 => {
-      lerExcel(file2, dados2 => {
-        let html = "<table><tr><th>Chave</th><th>Valor 1</th><th>Valor 2</th><th>Status</th></tr>";
-        const chaves = new Set([...Object.keys(dados1), ...Object.keys(dados2)]);
+    lerContas(fileContas, dadosContas => {
+      lerDDA(fileDDA, dadosDDA => {
+        const chavesContas = dadosContas.map(item => item.fornecedor + "|" + item.valor);
+        const chavesDDA = dadosDDA.map(item => item.fornecedor + "|" + item.valor);
 
-        chaves.forEach(chave => {
-          const val1 = dados1[chave] ?? 0;
-          const val2 = dados2[chave] ?? 0;
-          const match = val1 === val2;
-          html += `<tr class="${match ? 'match' : 'mismatch'}">
-            <td>${chave}</td>
-            <td>${val1.toFixed(2)}</td>
-            <td>${val2.toFixed(2)}</td>
-            <td>${match ? '✔ OK' : '✖ DIVERGENTE'}</td>
+        const todasChaves = new Set([...chavesContas, ...chavesDDA]);
+
+        let html = `<table>
+          <tr><th>Fornecedor</th><th>Valor</th><th>Status</th></tr>`;
+
+        todasChaves.forEach(chave => {
+          const [fornecedor, valor] = chave.split("|");
+          const emContas = chavesContas.includes(chave);
+          const emDDA = chavesDDA.includes(chave);
+          let status = '';
+          let classe = '';
+
+          if (emContas && emDDA) {
+            status = '✔ OK';
+            classe = 'match';
+          } else if (emContas) {
+            status = '✖ SÓ CONTAS';
+            classe = 'mismatch';
+          } else {
+            status = '✖ SÓ DDA';
+            classe = 'mismatch';
+          }
+
+          html += `<tr class="${classe}">
+            <td>${fornecedor}</td>
+            <td>${parseFloat(valor).toFixed(2)}</td>
+            <td>${status}</td>
           </tr>`;
         });
 
