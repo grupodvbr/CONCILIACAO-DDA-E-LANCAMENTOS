@@ -202,7 +202,7 @@
     const linhas = texto.split('\n');
     const resultado = [];
 
-    const padrao = /^(.*)\s+(\d{2}\/\d{2}\/\d{4})\s+([\d.]+,\d{2})$/;
+    const padrao = /(.*?)(\d{2}\/\d{2}\/\d{4})\s+([\d.]+,\d{2})$/;
 
     for (let linha of linhas) {
       const match = linha.trim().match(padrao);
