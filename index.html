@@ -2,19 +2,45 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Conciliação DDA x Contas a Pagar</title>
+  <title>Painel de Requisições Delícia Gourmet</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #f5f5f5;
-      padding: 30px;
+      padding: 0;
+      margin: 0;
     }
+
+    header {
+      background-color: #fff;
+      padding: 10px 30px;
+      border-bottom: 2px solid #ccc;
+    }
+
+    .header-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .logo {
+      height: 50px;
+      position: absolute;
+      left: 0;
+    }
+
     h1 {
       text-align: center;
-      margin-bottom: 30px;
+      margin: 0;
     }
+
+    .container {
+      padding: 30px;
+    }
+
     .input-group {
       display: flex;
       justify-content: center;
@@ -22,27 +48,34 @@
       flex-wrap: wrap;
       margin-bottom: 30px;
     }
+
     input[type="file"], button {
       padding: 10px;
       font-size: 16px;
     }
+
     button {
       cursor: pointer;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 30px;
     }
+
     th, td {
       border: 1px solid #ccc;
       padding: 8px;
       text-align: center;
+      font-size: 14px;
     }
+
     .match {
       background-color: #d4edda;
       color: #155724;
     }
+
     .mismatch {
       background-color: #f8d7da;
       color: #721c24;
@@ -51,21 +84,28 @@
 </head>
 <body>
 
-<h1>Conciliação DDA x Contas a Pagar</h1>
+<header>
+  <div class="header-container">
+    <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" alt="Logo" class="logo">
+    <h1>Painel de Requisições Delícia Gourmet</h1>
+  </div>
+</header>
 
-<div class="input-group">
-  <div>
-    <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
-    <input type="file" id="contas" accept=".xlsx,.xls" />
+<div class="container">
+  <div class="input-group">
+    <div>
+      <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
+      <input type="file" id="contas" accept=".xlsx,.xls" />
+    </div>
+    <div>
+      <label><strong>DDA (.pdf)</strong></label><br>
+      <input type="file" id="dda" accept=".pdf" />
+    </div>
+    <button onclick="conciliar()">Comparar</button>
   </div>
-  <div>
-    <label><strong>DDA (.pdf)</strong></label><br>
-    <input type="file" id="dda" accept=".pdf" />
-  </div>
-  <button onclick="conciliar()">Comparar</button>
+
+  <div id="resultado"></div>
 </div>
-
-<div id="resultado"></div>
 
 <script>
   function lerContas(file, callback) {
@@ -82,9 +122,9 @@
         const fornecedor = (linha[4] || "").toString().trim().toUpperCase();
         const vencimento = (linha[7] || "").toString().trim();
         const valor = parseFloat(linha[8]);
-        if (fornecedor && !isNaN(valor)) {
+        if (!isNaN(valor)) {
           resultados.push({
-            fonte: "Contas",
+            origem: "Contas",
             fornecedor,
             vencimento,
             valor: valor.toFixed(2)
@@ -120,15 +160,15 @@
           const resultados = [];
 
           linhas.forEach(l => {
-            const match = l.match(/^(.+?)\s+(\S+)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{1,3}(?:\.\d{3})*,\d{2})$/);
+            const match = l.match(/^(.+?)\s+\S+\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{1,3}(?:\.\d{3})*,\d{2})$/);
             if (match) {
               const fornecedor = match[1].trim().toUpperCase();
-              const vencimento = match[3];
-              const valorStr = match[4].replace(/\./g, '').replace(',', '.');
+              const vencimento = match[2];
+              const valorStr = match[3].replace(/\./g, '').replace(',', '.');
               const valor = parseFloat(valorStr);
               if (!isNaN(valor)) {
                 resultados.push({
-                  fonte: "DDA",
+                  origem: "DDA",
                   fornecedor,
                   vencimento,
                   valor: valor.toFixed(2)
@@ -155,34 +195,49 @@
 
     lerContas(fileContas, dadosContas => {
       lerPDF(fileDDA, dadosDDA => {
-        const todas = [...dadosContas, ...dadosDDA];
+        const usados = new Set();
+        let html = `
+          <table>
+            <tr>
+              <th>Fornecedor Contas</th>
+              <th>Fornecedor DDA</th>
+              <th>Vencimento</th>
+              <th>Valor (R$)</th>
+              <th>Status</th>
+            </tr>`;
 
-        // Agrupar por valor + fornecedor
-        const mapa = new Map();
-
-        todas.forEach(item => {
-          const chave = `${item.valor}|${item.fornecedor}`;
-          if (!mapa.has(chave)) mapa.set(chave, []);
-          mapa.get(chave).push(item.fonte);
+        dadosContas.forEach(c => {
+          const igual = dadosDDA.find((d, i) => !usados.has(i) && d.valor === c.valor);
+          if (igual) {
+            usados.add(dadosDDA.indexOf(igual));
+            html += `<tr class="match">
+              <td>${c.fornecedor}</td>
+              <td>${igual.fornecedor}</td>
+              <td>${c.vencimento || igual.vencimento || '-'}</td>
+              <td>${c.valor}</td>
+              <td>✔ OK</td>
+            </tr>`;
+          } else {
+            html += `<tr class="mismatch">
+              <td>${c.fornecedor}</td>
+              <td>-</td>
+              <td>${c.vencimento || '-'}</td>
+              <td>${c.valor}</td>
+              <td>✖ Só Contas</td>
+            </tr>`;
+          }
         });
 
-        let html = `<table>
-          <tr><th>Fornecedor</th><th>Vencimento</th><th>Valor (R$)</th><th>Status</th></tr>`;
-
-        mapa.forEach((fontes, chave) => {
-          const [valor, fornecedor] = chave.split('|');
-          const item = todas.find(i => i.valor === valor && i.fornecedor === fornecedor);
-          const status = fontes.includes("Contas") && fontes.includes("DDA") ? "✔ OK"
-                        : fontes.includes("Contas") ? "✖ Só Contas a Pagar"
-                        : "✖ Só DDA";
-          const classe = status === "✔ OK" ? "match" : "mismatch";
-
-          html += `<tr class="${classe}">
-            <td>${fornecedor}</td>
-            <td>${item.vencimento || "-"}</td>
-            <td>${valor}</td>
-            <td>${status}</td>
-          </tr>`;
+        dadosDDA.forEach((d, i) => {
+          if (!usados.has(i)) {
+            html += `<tr class="mismatch">
+              <td>-</td>
+              <td>${d.fornecedor}</td>
+              <td>${d.vencimento || '-'}</td>
+              <td>${d.valor}</td>
+              <td>✖ Só DDA</td>
+            </tr>`;
+          }
         });
 
         html += "</table>";
