@@ -93,8 +93,8 @@
       for (let i = 1; i < data.length; i++) {
         const linha = data[i];
         if (!linha || linha.length < 9) continue;
-        const valor = parseFloat(linha[8]);
-        const fornecedor = linha[2] || ''; // Coluna C = Cliente / Fornecedor
+        const valor = parseFloat(linha[8]); // Coluna I
+        const fornecedor = linha[5] || '';   // Coluna F: Cliente / Fornecedor
         if (!isNaN(valor)) {
           resultados.push({ valor: valor.toFixed(2), fornecedor });
         }
@@ -127,17 +127,13 @@
           const linhas = allText.split('\n');
           const resultados = [];
 
-          linhas.forEach((l) => {
+          linhas.forEach((l, i) => {
             const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
             if (match) {
               const valorStr = match[1].replace(/\./g, '').replace(',', '.');
               const valor = parseFloat(valorStr);
               if (!isNaN(valor)) {
-                const partes = l.split(' ');
-                partes.pop(); // valor
-                partes.pop(); // vencimento
-                partes.pop(); // documento
-                const fornecedor = partes.join(' ').trim();
+                const fornecedor = (linhas[i - 1] || '').trim(); // linha anterior ao valor
                 resultados.push({ valor: valor.toFixed(2), fornecedor });
               }
             }
