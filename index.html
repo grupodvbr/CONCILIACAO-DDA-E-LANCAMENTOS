@@ -15,25 +15,18 @@
     header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
+      gap: 15px;
+      padding: 15px 20px;
       border-bottom: 2px solid #ccc;
       background: #fff;
     }
+    header img {
+      height: 40px;
+    }
     header h1 {
-      margin-left: 10px;
-    }
-    .filtros {
-      display: flex;
-      justify-content: space-between;
-      padding: 20px;
-      background: #fff;
-      border-bottom: 1px solid #ccc;
-    }
-    .filtros div {
-      display: flex;
-      gap: 10px;
-      align-items: center;
+      margin: 0;
+      font-size: 1.6em;
+      font-weight: bold;
     }
     main {
       display: flex;
@@ -68,50 +61,42 @@
     }
     .botoes {
       display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 10px;
+      justify-content: center;
+      gap: 20px;
+      margin: 20px 0;
     }
     button {
-      padding: 5px 10px;
+      padding: 8px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
+    }
+    input[type="file"] {
+      margin: 0 10px;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" height="40">
+  <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" alt="Logo CB Systems" />
   <h1>Painel de Conciliação Financeira</h1>
 </header>
 
-<div class="filtros">
-  <div>
-    <label>Status:</label>
-    <select>
-      <option selected>Pendentes de conciliação</option>
-      <option>Conciliados</option>
-    </select>
-  </div>
-  <div>
-    <label>De:</label><input type="date" />
-    <label>Até:</label><input type="date" />
-  </div>
-  <div>
-    <label>Contas:</label><input type="file" id="contas" accept=".xlsx,.xls" />
-    <label>DDA:</label><input type="file" id="dda" accept=".pdf" />
-    <button onclick="conciliar()">Comparar</button>
-  </div>
+<div class="botoes">
+  <label>Contas:</label><input type="file" id="contas" accept=".xlsx,.xls" />
+  <label>DDA:</label><input type="file" id="dda" accept=".pdf" />
+  <button onclick="conciliar()">Comparar</button>
 </div>
 
 <main>
   <div class="coluna" id="sistema">
     <h2>Movimentos do Sistema</h2>
-    <!-- Cards do Excel aqui -->
   </div>
   <div class="coluna" id="banco">
     <h2>Extrato Bancário</h2>
-    <!-- Cards do PDF aqui -->
   </div>
 </main>
 
