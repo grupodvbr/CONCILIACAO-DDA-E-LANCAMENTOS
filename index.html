@@ -104,22 +104,26 @@
     #totais {
       padding: 10px 20px;
       font-weight: bold;
+      background: #fff;
+      border-top: 1px solid #ccc;
+    }
+    #qtdeConciliado {
+      color: green;
+    }
+    #qtdePendente {
+      color: orange;
     }
     #valorConciliado {
-      color: white;
       background: green;
+      color: white;
       padding: 2px 6px;
       border-radius: 4px;
     }
     #valorPendente {
-      color: white;
       background: orange;
+      color: white;
       padding: 2px 6px;
       border-radius: 4px;
-    }
-    .arquivo-info {
-      font-size: 0.9em;
-      color: #333;
     }
   </style>
 </head>
@@ -131,10 +135,8 @@
   <div class="topo-fixo">
     <input type="file" id="contas" accept=".xlsx,.xls" onchange="mostrarArquivo('contas')" />
     <button onclick="document.getElementById('contas').click()">Escolher Arquivo Excel</button>
-
     <input type="file" id="dda" accept="application/pdf" multiple onchange="mostrarArquivo('dda')" />
     <button onclick="document.getElementById('dda').click()">Escolher Arquivo PDF</button>
-
     <button onclick="conciliar()">Comparar</button>
     <button class="limpar" onclick="limparHistorico()">Limpar Histórico</button>
   </div>
@@ -154,17 +156,19 @@
     Valor Conciliado: <span id="valorConciliado">R$ 0,00</span> |
     Valor Pendente: <span id="valorPendente">R$ 0,00</span>
   </div>
+
   <script>
     function mostrarArquivo(tipo) {
       const input = document.getElementById(tipo);
       const nome = input.files.length ? input.files[0].name : 'Nenhum arquivo';
       alert(`Arquivo selecionado (${tipo.toUpperCase()}): ${nome}`);
     }
+
     function limparHistorico() {
-      localStorage.removeItem('conciliacaoDados');
+      localStorage.removeItem('contas');
+      localStorage.removeItem('dda');
       location.reload();
     }
-  </script>
 
     function salvarLocal(nome, dados) {
       localStorage.setItem(nome, JSON.stringify(dados));
@@ -283,11 +287,11 @@
 
       [...conciliadosContas, ...naoConciliadosContas].forEach(conta => {
         const match = conciliadosContas.includes(conta);
-        const card = `<div class="card ${match ? 'match' : ''}">`
-          + `<div class="valor">R$ ${conta.valor}</div>`
-          + `<div>${conta.cod || ''}</div>`
-          + `<div>${conta.fornecedor}</div>`
-          + `</div>`;
+        const card = `<div class="card ${match ? 'match' : ''}">
+            <div class="valor">R$ ${conta.valor}</div>
+            <div>${conta.cod || ''}</div>
+            <div>${conta.fornecedor}</div>
+          </div>`;
         sistemaDiv.innerHTML += card;
       });
 
@@ -303,16 +307,20 @@
 
       [...conciliadosDDA, ...naoConciliadosDDA].forEach(dda => {
         const match = conciliadosDDA.includes(dda);
-        const card = `<div class="card ${match ? 'match' : ''}">`
-          + `<div class="valor">R$ ${dda.valor} - ${dda.data || ''}</div>`
-          + `<div>${dda.fornecedor || ''}</div>`
-          + `</div>`;
+        const card = `<div class="card ${match ? 'match' : ''}">
+            <div class="valor">R$ ${dda.valor} - ${dda.data || ''}</div>
+            <div>${dda.fornecedor || ''}</div>
+          </div>`;
         bancoDiv.innerHTML += card;
       });
 
       const pendentes = dadosContas.length - conciliados;
       const valorPendente = dadosContas.reduce((acc, el) => acc + parseFloat(el.valor), 0) - valorConciliado;
-      document.getElementById("totais").innerText = `Consolidados: ${conciliados} | Pendentes: ${pendentes} | Valor Conciliado: R$ ${valorConciliado.toFixed(2)} | Valor Pendente: R$ ${valorPendente.toFixed(2)}`;
+
+      document.getElementById("qtdeConciliado").innerText = conciliados;
+      document.getElementById("qtdePendente").innerText = pendentes;
+      document.getElementById("valorConciliado").innerText = `R$ ${valorConciliado.toFixed(2)}`;
+      document.getElementById("valorPendente").innerText = `R$ ${valorPendente.toFixed(2)}`;
     }
 
     window.onload = function () {
