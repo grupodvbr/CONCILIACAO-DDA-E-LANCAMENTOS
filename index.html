@@ -5,6 +5,11 @@
   <title>Conciliação DDA x Contas a Pagar</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <script>
+    // Configuração do worker do PDF.js
+    window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
+  </script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -120,6 +125,11 @@
       background: #28a745;
       transition: width 0.3s ease;
     }
+
+    h3 {
+      margin-top: 30px;
+      color: #004085;
+    }
   </style>
 </head>
 <body>
@@ -148,6 +158,8 @@
 
   <input type="text" id="searchBox" placeholder="Pesquisar por fornecedor ou valor..." oninput="filtrarTabela()">
   <div id="status"></div>
+
+  <div id="previewDDA"></div> <!-- Prévia do PDF -->
   <div id="resultado"></div>
 </div>
 
@@ -157,7 +169,6 @@
     const barra = container.querySelector(".progress-bar");
     container.style.display = 'block';
     barra.style.width = "0%";
-
     let progress = 0;
     const intervalo = setInterval(() => {
       progress += 10;
@@ -191,7 +202,7 @@
             textoCompleto += strings.join('\n') + '\n';
           }
           resolve(textoCompleto);
-        });
+        }).catch(reject);
       };
       reader.onerror = reject;
       reader.readAsArrayBuffer(file);
@@ -201,8 +212,7 @@
   function extrairLinhasValidas(texto) {
     const linhas = texto.split('\n');
     const resultado = [];
-
-    const padrao = /(.*?)(\d{2}\/\d{2}\/\d{4})\s+([\d.]+,\d{2})$/;
+    const padrao = /(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+([\d.]+,\d{2})$/;
 
     for (let linha of linhas) {
       const match = linha.trim().match(padrao);
@@ -220,6 +230,15 @@
     }
 
     return resultado;
+  }
+
+  function exibirPreviewDDA(lista) {
+    let html = "<h3>Prévia do DDA (PDF):</h3><table><tr><th>Fornecedor</th><th>Valor</th></tr>";
+    for (const item of lista) {
+      html += `<tr><td>${item.fornecedor}</td><td>${item.valor}</td></tr>`;
+    }
+    html += "</table>";
+    document.getElementById("previewDDA").innerHTML = html;
   }
 
   function lerContas(file, callback) {
@@ -250,6 +269,7 @@
 
     const textoPDF = await lerTextoDoPDF(fileDDA);
     const dadosDDA = extrairLinhasValidas(textoPDF);
+    exibirPreviewDDA(dadosDDA);
 
     lerContas(fileContas, dadosContas => {
       const chavesContas = dadosContas.map(e => e.fornecedor + "|" + e.valor);
