@@ -49,7 +49,7 @@
     }
 
     input[type="file"] {
-      margin: 0 5px;
+      display: none;
     }
 
     button {
@@ -122,9 +122,13 @@
 
 <div class="topo-fixo">
   <label>Contas a pagar F360:</label>
-  <input type="file" id="contas" accept=".xlsx,.xls" />
+  <input type="file" id="contas" accept=".xlsx,.xls" onchange="mostrarNomeArquivo('contas')" />
+  <button onclick="document.getElementById('contas').click()">Escolher Arquivo Excel</button>
+
   <label>Boletos no DDA:</label>
-  <input type="file" id="dda" accept=".pdf" />
+  <input type="file" id="dda" accept=".pdf" onchange="mostrarNomeArquivo('dda')" />
+  <button onclick="document.getElementById('dda').click()">Escolher Arquivo PDF</button>
+
   <button onclick="conciliar()">Comparar</button>
 </div>
 
@@ -140,6 +144,20 @@
 </main>
 
 <script>
+function mostrarNomeArquivo(tipo) {
+  const fileInput = document.getElementById(tipo);
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const nome = file.name;
+  const card = `<div class="card">
+    <div><strong>Arquivo carregado:</strong> ${nome}</div>
+  </div>`;
+
+  const destino = tipo === 'contas' ? document.getElementById('sistema') : document.getElementById('banco');
+  destino.innerHTML = card;
+}
+
 function lerContas(file, callback) {
   const reader = new FileReader();
   reader.onload = function (e) {
