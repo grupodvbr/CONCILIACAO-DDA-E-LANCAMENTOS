@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Conciliação DDA x Contas a Pagar</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -54,8 +55,8 @@
     <input type="file" id="contas" accept=".xlsx,.xls" />
   </div>
   <div>
-    <label><strong>DDA (.xlsx)</strong></label><br>
-    <input type="file" id="dda" accept=".xlsx,.xls" />
+    <label><strong>DDA (.pdf)</strong></label><br>
+    <input type="file" id="dda" accept=".pdf" />
   </div>
   <button onclick="conciliar()">Comparar</button>
 </div>
@@ -85,24 +86,44 @@
     reader.readAsArrayBuffer(file);
   }
 
-  function lerDDA(file, callback) {
+  function lerDDApdf(file, callback) {
     const reader = new FileReader();
-    reader.onload = function (e) {
-      const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    reader.onload = function () {
+      const typedarray = new Uint8Array(this.result);
+      pdfjsLib.getDocument({ data: typedarray }).promise.then(function (pdf) {
+        let allText = '';
+        let promises = [];
 
-      const resultados = [];
-      for (let i = 0; i < data.length; i++) {
-        const linha = data[i];
-        if (!linha || linha.length < 2) continue;
-        const fornecedor = (linha[0] || "").toString().trim().toUpperCase();
-        const valor = parseFloat(linha[linha.length - 1]);
-        if (fornecedor && !isNaN(valor)) {
-          resultados.push({ fornecedor, valor: valor.toFixed(2) });
+        for (let i = 1; i <= pdf.numPages; i++) {
+          promises.push(
+            pdf.getPage(i).then(function (page) {
+              return page.getTextContent().then(function (textContent) {
+                const strings = textContent.items.map(item => item.str);
+                allText += strings.join('\n') + '\n';
+              });
+            })
+          );
         }
-      }
-      callback(resultados);
+
+        Promise.all(promises).then(function () {
+          const linhas = allText.split('\n');
+          const resultados = [];
+
+          linhas.forEach(l => {
+            const match = l.match(/^(.+?)\s+(\d{1,3}(?:\.\d{3})*,\d{2})$/);
+            if (match) {
+              const fornecedor = match[1].trim().toUpperCase();
+              const valorStr = match[2].replace(/\./g, '').replace(',', '.');
+              const valor = parseFloat(valorStr);
+              if (!isNaN(valor)) {
+                resultados.push({ fornecedor, valor: valor.toFixed(2) });
+              }
+            }
+          });
+
+          callback(resultados);
+        });
+      });
     };
     reader.readAsArrayBuffer(file);
   }
@@ -117,19 +138,18 @@
     }
 
     lerContas(fileContas, dadosContas => {
-      lerDDA(fileDDA, dadosDDA => {
-        const chavesContas = dadosContas.map(item => item.fornecedor + "|" + item.valor);
-        const chavesDDA = dadosDDA.map(item => item.fornecedor + "|" + item.valor);
+      lerDDApdf(fileDDA, dadosDDA => {
+        const chavesContas = dadosContas.map(item => item.valor);
+        const chavesDDA = dadosDDA.map(item => item.valor);
 
         const todasChaves = new Set([...chavesContas, ...chavesDDA]);
 
         let html = `<table>
-          <tr><th>Fornecedor</th><th>Valor</th><th>Status</th></tr>`;
+          <tr><th>Valor</th><th>Status</th></tr>`;
 
-        todasChaves.forEach(chave => {
-          const [fornecedor, valor] = chave.split("|");
-          const emContas = chavesContas.includes(chave);
-          const emDDA = chavesDDA.includes(chave);
+        todasChaves.forEach(valor => {
+          const emContas = chavesContas.includes(valor);
+          const emDDA = chavesDDA.includes(valor);
           let status = '';
           let classe = '';
 
@@ -145,7 +165,6 @@
           }
 
           html += `<tr class="${classe}">
-            <td>${fornecedor}</td>
             <td>${parseFloat(valor).toFixed(2)}</td>
             <td>${status}</td>
           </tr>`;
