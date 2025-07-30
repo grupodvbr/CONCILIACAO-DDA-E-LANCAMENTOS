@@ -48,6 +48,13 @@
       border-bottom: 1px solid #ddd;
     }
 
+    #resumoTotais {
+      padding: 10px 20px;
+      background: #eef;
+      border-bottom: 2px solid #ccc;
+      font-weight: bold;
+    }
+
     input[type="file"] {
       display: none;
     }
@@ -65,7 +72,7 @@
       display: flex;
       gap: 20px;
       padding: 20px;
-      height: calc(100vh - 130px);
+      height: calc(100vh - 180px);
       box-sizing: border-box;
     }
 
@@ -126,10 +133,15 @@
   <button onclick="document.getElementById('contas').click()">Escolher Arquivo Excel</button>
 
   <label>Boletos no DDA:</label>
-  <input type="file" id="dda" accept=".pdf" onchange="mostrarNomeArquivo('dda')" />
-  <button onclick="document.getElementById('dda').click()">Escolher Arquivo PDF</button>
+  <input type="file" id="dda" accept=".pdf" multiple onchange="mostrarNomeArquivo('dda')" />
+  <button onclick="document.getElementById('dda').click()">Escolher Arquivos PDF</button>
 
   <button onclick="conciliar()">Comparar</button>
+</div>
+
+<div id="resumoTotais">
+  <div id="totalF360">F360 → Conciliado: R$ 0,00 | Pendente: R$ 0,00</div>
+  <div id="totalDDA">DDA → Conciliado: R$ 0,00 | Pendente: R$ 0,00</div>
 </div>
 
 <main>
@@ -146,12 +158,12 @@
 <script>
 function mostrarNomeArquivo(tipo) {
   const fileInput = document.getElementById(tipo);
-  const file = fileInput.files[0];
-  if (!file) return;
+  const files = fileInput.files;
+  if (!files.length) return;
 
-  const nome = file.name;
+  const nomes = Array.from(files).map(f => `<li>${f.name}</li>`).join('');
   const card = `<div class="card">
-    <div><strong>Arquivo carregado:</strong> ${nome}</div>
+    <div><strong>Arquivos carregados:</strong><ul>${nomes}</ul></div>
   </div>`;
 
   const destino = tipo === 'contas' ? document.getElementById('sistema') : document.getElementById('banco');
@@ -180,54 +192,61 @@ function lerContas(file, callback) {
   reader.readAsArrayBuffer(file);
 }
 
-function lerPDF(file, callback) {
-  const reader = new FileReader();
-  reader.onload = function () {
-    const typedarray = new Uint8Array(this.result);
-    pdfjsLib.getDocument({ data: typedarray }).promise.then(function (pdf) {
-      let allText = '';
-      let promises = [];
-      for (let i = 1; i <= pdf.numPages; i++) {
-        promises.push(
-          pdf.getPage(i).then(page => page.getTextContent().then(tc => {
-            const strings = tc.items.map(item => item.str);
-            allText += strings.join('\n') + '\n';
-          }))
-        );
-      }
-      Promise.all(promises).then(function () {
-        const linhas = allText.split('\n');
-        const resultados = [];
-        linhas.forEach((l, i) => {
-          const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
-          if (match) {
-            const valorStr = match[1].replace(/\./g, '').replace(',', '.');
-            const valor = parseFloat(valorStr);
-            if (!isNaN(valor)) {
-              const identificador = (linhas[i - 1] || '').trim();
-              const fornecedor = (linhas[i - 2] || '').trim();
-              resultados.push({ valor: valor.toFixed(2), identificador, fornecedor });
+function lerPDF(files, callbackFinal) {
+  let resultadosTotais = [];
+  let arquivosLidos = 0;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const typedarray = new Uint8Array(this.result);
+      pdfjsLib.getDocument({ data: typedarray }).promise.then(function (pdf) {
+        let allText = '';
+        let promises = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          promises.push(
+            pdf.getPage(i).then(page => page.getTextContent().then(tc => {
+              const strings = tc.items.map(item => item.str);
+              allText += strings.join('\n') + '\n';
+            }))
+          );
+        }
+        Promise.all(promises).then(function () {
+          const linhas = allText.split('\n');
+          linhas.forEach((l, i) => {
+            const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
+            if (match) {
+              const valorStr = match[1].replace(/\./g, '').replace(',', '.');
+              const valor = parseFloat(valorStr);
+              if (!isNaN(valor)) {
+                const identificador = (linhas[i - 1] || '').trim();
+                const fornecedor = (linhas[i - 2] || '').trim();
+                resultadosTotais.push({ valor: valor.toFixed(2), identificador, fornecedor });
+              }
             }
+          });
+
+          arquivosLidos++;
+          if (arquivosLidos === files.length) {
+            callbackFinal(resultadosTotais);
           }
         });
-        callback(resultados);
       });
-    });
-  };
-  reader.readAsArrayBuffer(file);
+    };
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 function conciliar() {
   const fileContas = document.getElementById('contas').files[0];
-  const fileDDA = document.getElementById('dda').files[0];
-  if (!fileContas || !fileDDA) {
+  const filesDDA = document.getElementById('dda').files;
+  if (!fileContas || filesDDA.length === 0) {
     alert("Selecione os dois arquivos.");
     return;
   }
 
   lerContas(fileContas, dadosContas => {
-    lerPDF(fileDDA, dadosDDA => {
-      // Ordenar por valor
+    lerPDF(filesDDA, dadosDDA => {
       dadosContas.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
       dadosDDA.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
 
@@ -250,16 +269,6 @@ function conciliar() {
         }
       });
 
-      conciliadosContas.concat(naoConciliadosContas).forEach(conta => {
-        const match = conciliadosContas.includes(conta);
-        const card = `<div class="card ${match ? 'match' : ''}">
-          <div class="valor">R$ ${conta.valor}</div>
-          <div>${conta.fornecedor}</div>
-          <div>${conta.data}</div>
-        </div>`;
-        sistemaDiv.innerHTML += card;
-      });
-
       const conciliadosDDA = [];
       const naoConciliadosDDA = [];
 
@@ -269,6 +278,27 @@ function conciliar() {
         } else {
           naoConciliadosDDA.push(dda);
         }
+      });
+
+      // Mostrar totais
+      const totalConciliadoF360 = conciliadosContas.reduce((s, i) => s + parseFloat(i.valor), 0);
+      const totalPendenteF360 = naoConciliadosContas.reduce((s, i) => s + parseFloat(i.valor), 0);
+      const totalConciliadoDDA = conciliadosDDA.reduce((s, i) => s + parseFloat(i.valor), 0);
+      const totalPendenteDDA = naoConciliadosDDA.reduce((s, i) => s + parseFloat(i.valor), 0);
+
+      document.getElementById('totalF360').innerText =
+        `F360 → Conciliado: R$ ${totalConciliadoF360.toFixed(2)} | Pendente: R$ ${totalPendenteF360.toFixed(2)}`;
+      document.getElementById('totalDDA').innerText =
+        `DDA → Conciliado: R$ ${totalConciliadoDDA.toFixed(2)} | Pendente: R$ ${totalPendenteDDA.toFixed(2)}`;
+
+      // Exibir cards
+      conciliadosContas.concat(naoConciliadosContas).forEach(conta => {
+        const card = `<div class="card ${conciliadosContas.includes(conta) ? 'match' : ''}">
+          <div class="valor">R$ ${conta.valor}</div>
+          <div>${conta.fornecedor}</div>
+          <div>${conta.data}</div>
+        </div>`;
+        sistemaDiv.innerHTML += card;
       });
 
       conciliadosDDA.concat(naoConciliadosDDA).forEach(dda => {
