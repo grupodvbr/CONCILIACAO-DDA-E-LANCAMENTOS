@@ -106,12 +106,20 @@
       font-weight: bold;
     }
     #valorConciliado {
-      color: green;
-      font-weight: bold;
+      color: white;
+      background: green;
+      padding: 2px 6px;
+      border-radius: 4px;
     }
     #valorPendente {
-      color: orange;
-      font-weight: bold;
+      color: white;
+      background: orange;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .arquivo-info {
+      font-size: 0.9em;
+      color: #333;
     }
   </style>
 </head>
@@ -121,10 +129,10 @@
     <h1>Conferência de Lançamentos F360 X DDA</h1>
   </header>
   <div class="topo-fixo">
-    <input type="file" id="contas" accept=".xlsx,.xls" />
+    <input type="file" id="contas" accept=".xlsx,.xls" onchange="mostrarArquivo('contas')" />
     <button onclick="document.getElementById('contas').click()">Escolher Arquivo Excel</button>
 
-    <input type="file" id="dda" accept="application/pdf" multiple />
+    <input type="file" id="dda" accept="application/pdf" multiple onchange="mostrarArquivo('dda')" />
     <button onclick="document.getElementById('dda').click()">Escolher Arquivo PDF</button>
 
     <button onclick="conciliar()">Comparar</button>
@@ -147,10 +155,16 @@
     Valor Pendente: <span id="valorPendente">R$ 0,00</span>
   </div>
   <script>
+    function mostrarArquivo(tipo) {
+      const input = document.getElementById(tipo);
+      const nome = input.files.length ? input.files[0].name : 'Nenhum arquivo';
+      alert(`Arquivo selecionado (${tipo.toUpperCase()}): ${nome}`);
+    }
     function limparHistorico() {
-      localStorage.clear();
+      localStorage.removeItem('conciliacaoDados');
       location.reload();
     }
+  </script>
 
     function salvarLocal(nome, dados) {
       localStorage.setItem(nome, JSON.stringify(dados));
