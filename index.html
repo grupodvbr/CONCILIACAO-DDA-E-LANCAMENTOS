@@ -227,8 +227,7 @@ function conciliar() {
 
   lerContas(fileContas, dadosContas => {
     lerPDF(fileDDA, dadosDDA => {
-
-      // ORDENAR por VALOR crescente
+      // Ordenar por valor
       dadosContas.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
       dadosDDA.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
 
@@ -238,10 +237,21 @@ function conciliar() {
       sistemaDiv.innerHTML = '';
       bancoDiv.innerHTML = '';
 
+      const conciliadosContas = [];
+      const naoConciliadosContas = [];
+
       dadosContas.forEach(conta => {
         let index = dadosDDA.findIndex((dda, i) => !usadosDDA[i] && dda.valor === conta.valor);
-        let match = index !== -1;
-        if (match) usadosDDA[index] = true;
+        if (index !== -1) {
+          usadosDDA[index] = true;
+          conciliadosContas.push(conta);
+        } else {
+          naoConciliadosContas.push(conta);
+        }
+      });
+
+      conciliadosContas.concat(naoConciliadosContas).forEach(conta => {
+        const match = conciliadosContas.includes(conta);
         const card = `<div class="card ${match ? 'match' : ''}">
           <div class="valor">R$ ${conta.valor}</div>
           <div>${conta.fornecedor}</div>
@@ -250,8 +260,19 @@ function conciliar() {
         sistemaDiv.innerHTML += card;
       });
 
+      const conciliadosDDA = [];
+      const naoConciliadosDDA = [];
+
       dadosDDA.forEach((dda, i) => {
-        const card = `<div class="card ${usadosDDA[i] ? 'match' : ''}">
+        if (usadosDDA[i]) {
+          conciliadosDDA.push(dda);
+        } else {
+          naoConciliadosDDA.push(dda);
+        }
+      });
+
+      conciliadosDDA.concat(naoConciliadosDDA).forEach(dda => {
+        const card = `<div class="card ${conciliadosDDA.includes(dda) ? 'match' : ''}">
           <div class="valor">R$ ${dda.valor}</div>
           <div>${dda.identificador || ''}</div>
           <div>${dda.fornecedor || ''}</div>
