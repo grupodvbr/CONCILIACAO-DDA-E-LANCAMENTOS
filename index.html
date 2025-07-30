@@ -34,7 +34,6 @@
     .topo-fixo {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
       gap: 10px;
       padding: 10px 20px;
       background: #f8f8f8;
@@ -43,7 +42,11 @@
       z-index: 999;
       border-bottom: 1px solid #ddd;
     }
-    button {
+    .topo-fixo label,
+    .topo-fixo input[type="file"] {
+      display: none;
+    }
+    .topo-fixo button {
       padding: 6px 15px;
       background-color: #007bff;
       color: white;
@@ -51,7 +54,7 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    .limpar {
+    .topo-fixo .limpar {
       background-color: #dc3545;
     }
     main {
@@ -110,11 +113,9 @@
     <h1>Conferência de Lançamentos F360 X DDA</h1>
   </header>
   <div class="topo-fixo">
-    <label>Contas a pagar F360:</label>
     <input type="file" id="contas" accept=".xlsx,.xls" />
     <button onclick="document.getElementById('contas').click()">Escolher Arquivo Excel</button>
 
-    <label>Boletos no DDA:</label>
     <input type="file" id="dda" accept="application/pdf" multiple />
     <button onclick="document.getElementById('dda').click()">Escolher Arquivo PDF</button>
 
@@ -131,7 +132,7 @@
       <div class="coluna-scroll" id="banco"></div>
     </div>
   </main>
-  <div id="totais">Consolidados: 0 | Pendentes: 0</div>
+  <div id="totais">Consolidados: 0 | Pendentes: 0 | Valor Conciliado: R$ 0,00 | Valor Pendente: R$ 0,00</div>
   <script>
     function limparHistorico() {
       localStorage.clear();
@@ -237,6 +238,7 @@
       bancoDiv.innerHTML = '';
 
       let conciliados = 0;
+      let valorConciliado = 0;
 
       const conciliadosContas = [];
       const naoConciliadosContas = [];
@@ -245,6 +247,7 @@
         if (index !== -1) {
           usadosDDA[index] = true;
           conciliados++;
+          valorConciliado += parseFloat(conta.valor);
           conciliadosContas.push(conta);
         } else {
           naoConciliadosContas.push(conta);
@@ -281,7 +284,8 @@
       });
 
       const pendentes = dadosContas.length - conciliados;
-      document.getElementById("totais").innerText = `Consolidados: ${conciliados} | Pendentes: ${pendentes}`;
+      const valorPendente = dadosContas.reduce((acc, el) => acc + parseFloat(el.valor), 0) - valorConciliado;
+      document.getElementById("totais").innerText = `Consolidados: ${conciliados} | Pendentes: ${pendentes} | Valor Conciliado: R$ ${valorConciliado.toFixed(2)} | Valor Pendente: R$ ${valorPendente.toFixed(2)}`;
     }
 
     window.onload = function () {
