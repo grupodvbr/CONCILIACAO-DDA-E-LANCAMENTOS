@@ -147,8 +147,9 @@ function lerPDF(file, callback) {
             const valorStr = match[1].replace(/\./g, '').replace(',', '.');
             const valor = parseFloat(valorStr);
             if (!isNaN(valor)) {
-              const fornecedor = (linhas[i - 1] || '').trim();
-              resultados.push({ valor: valor.toFixed(2), fornecedor });
+              const identificador = (linhas[i - 1] || '').trim();
+              const fornecedor = (linhas[i - 2] || '').trim();
+              resultados.push({ valor: valor.toFixed(2), identificador, fornecedor });
             }
           }
         });
@@ -189,7 +190,8 @@ function conciliar() {
       dadosDDA.forEach((dda, i) => {
         const card = `<div class="card ${usadosDDA[i] ? 'match' : ''}">
           <div class="valor">R$ ${dda.valor}</div>
-          <div>${dda.fornecedor}</div>
+          <div>${dda.identificador || ''}</div>
+          <div>${dda.fornecedor || ''}</div>
         </div>`;
         bancoDiv.innerHTML += card;
       });
