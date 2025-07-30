@@ -68,7 +68,6 @@
       border: 1px solid #ccc;
       padding: 8px;
       text-align: center;
-      font-size: 14px;
     }
 
     .match {
@@ -122,9 +121,9 @@
         const fornecedor = (linha[4] || "").toString().trim().toUpperCase();
         const vencimento = (linha[7] || "").toString().trim();
         const valor = parseFloat(linha[8]);
-        if (!isNaN(valor)) {
+        if (fornecedor && !isNaN(valor)) {
           resultados.push({
-            origem: "Contas",
+            fonte: "Contas",
             fornecedor,
             vencimento,
             valor: valor.toFixed(2)
@@ -168,7 +167,7 @@
               const valor = parseFloat(valorStr);
               if (!isNaN(valor)) {
                 resultados.push({
-                  origem: "DDA",
+                  fonte: "DDA",
                   fornecedor,
                   vencimento,
                   valor: valor.toFixed(2)
@@ -195,49 +194,33 @@
 
     lerContas(fileContas, dadosContas => {
       lerPDF(fileDDA, dadosDDA => {
-        const usados = new Set();
-        let html = `
-          <table>
-            <tr>
-              <th>Fornecedor Contas</th>
-              <th>Fornecedor DDA</th>
-              <th>Vencimento</th>
-              <th>Valor (R$)</th>
-              <th>Status</th>
-            </tr>`;
+        const todas = [...dadosContas, ...dadosDDA];
 
-        dadosContas.forEach(c => {
-          const igual = dadosDDA.find((d, i) => !usados.has(i) && d.valor === c.valor);
-          if (igual) {
-            usados.add(dadosDDA.indexOf(igual));
-            html += `<tr class="match">
-              <td>${c.fornecedor}</td>
-              <td>${igual.fornecedor}</td>
-              <td>${c.vencimento || igual.vencimento || '-'}</td>
-              <td>${c.valor}</td>
-              <td>✔ OK</td>
-            </tr>`;
-          } else {
-            html += `<tr class="mismatch">
-              <td>${c.fornecedor}</td>
-              <td>-</td>
-              <td>${c.vencimento || '-'}</td>
-              <td>${c.valor}</td>
-              <td>✖ Só Contas</td>
-            </tr>`;
-          }
+        const mapa = new Map();
+
+        todas.forEach(item => {
+          const chave = `${item.valor}|${item.fornecedor}`;
+          if (!mapa.has(chave)) mapa.set(chave, []);
+          mapa.get(chave).push(item.fonte);
         });
 
-        dadosDDA.forEach((d, i) => {
-          if (!usados.has(i)) {
-            html += `<tr class="mismatch">
-              <td>-</td>
-              <td>${d.fornecedor}</td>
-              <td>${d.vencimento || '-'}</td>
-              <td>${d.valor}</td>
-              <td>✖ Só DDA</td>
-            </tr>`;
-          }
+        let html = `<table>
+          <tr><th>Fornecedor</th><th>Vencimento</th><th>Valor (R$)</th><th>Status</th></tr>`;
+
+        mapa.forEach((fontes, chave) => {
+          const [valor, fornecedor] = chave.split('|');
+          const item = todas.find(i => i.valor === valor && i.fornecedor === fornecedor);
+          const status = fontes.includes("Contas") && fontes.includes("DDA") ? "✔ OK"
+                        : fontes.includes("Contas") ? "✖ Só Contas a Pagar"
+                        : "✖ Só DDA";
+          const classe = status === "✔ OK" ? "match" : "mismatch";
+
+          html += `<tr class="${classe}">
+            <td>${fornecedor}</td>
+            <td>${item.vencimento || "-"}</td>
+            <td>${valor}</td>
+            <td>${status}</td>
+          </tr>`;
         });
 
         html += "</table>";
