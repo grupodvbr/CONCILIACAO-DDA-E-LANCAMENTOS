@@ -224,8 +224,14 @@ function conciliar() {
     alert("Selecione os dois arquivos.");
     return;
   }
+
   lerContas(fileContas, dadosContas => {
     lerPDF(fileDDA, dadosDDA => {
+
+      // ORDENAR por VALOR crescente
+      dadosContas.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
+      dadosDDA.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
+
       const usadosDDA = new Array(dadosDDA.length).fill(false);
       const sistemaDiv = document.getElementById('sistema');
       const bancoDiv = document.getElementById('banco');
@@ -256,5 +262,6 @@ function conciliar() {
   });
 }
 </script>
+
 </body>
 </html>
