@@ -103,6 +103,23 @@
       margin-top: 15px;
       color: #007bff;
     }
+
+    .progress-container {
+      width: 100%;
+      background: #ddd;
+      height: 6px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #28a745;
+      transition: width 0.3s ease;
+    }
   </style>
 </head>
 <body>
@@ -116,11 +133,13 @@
   <div class="input-group">
     <div style="flex: 1">
       <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
-      <input type="file" id="contas" accept=".xlsx,.xls" onchange="mostrarStatus('Lendo Excel...')">
+      <input type="file" id="contas" accept=".xlsx,.xls" onchange="carregarArquivo(this, 'excelProgress')">
+      <div class="progress-container" id="excelProgress"><div class="progress-bar"></div></div>
     </div>
     <div style="flex: 1">
       <label><strong>DDA (PDF)</strong></label><br>
-      <input type="file" id="ddaPdf" accept=".pdf" onchange="mostrarStatus('Lendo PDF...')">
+      <input type="file" id="ddaPdf" accept=".pdf" onchange="carregarArquivo(this, 'pdfProgress')">
+      <div class="progress-container" id="pdfProgress"><div class="progress-bar"></div></div>
     </div>
     <div style="display: flex; align-items: flex-end">
       <button onclick="executarConciliacao()">Conciliar</button>
@@ -133,6 +152,23 @@
 </div>
 
 <script>
+  function carregarArquivo(input, barraId) {
+    const container = document.getElementById(barraId);
+    const barra = container.querySelector(".progress-bar");
+    container.style.display = 'block';
+    barra.style.width = "0%";
+
+    let progress = 0;
+    const intervalo = setInterval(() => {
+      progress += 10;
+      barra.style.width = progress + "%";
+      if (progress >= 100) {
+        clearInterval(intervalo);
+        setTimeout(() => container.style.display = 'none', 500);
+      }
+    }, 50);
+  }
+
   function mostrarStatus(msg) {
     document.getElementById("status").innerText = msg;
   }
@@ -193,7 +229,7 @@
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       const lista = [];
-      for (let i = 1; i < data.length; i++) { // Lê desde a linha 1
+      for (let i = 1; i < data.length; i++) {
         const linha = data[i];
         const fornecedor = (linha[4] || "").toString().trim().toUpperCase();
         const valor = parseFloat(linha[8]);
