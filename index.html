@@ -93,25 +93,6 @@
       margin-top: 15px;
       color: #007bff;
     }
-    .progress-container {
-      width: 100%;
-      background: #ddd;
-      height: 6px;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-top: 4px;
-      display: none;
-    }
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background: #28a745;
-      transition: width 0.3s ease;
-    }
-    h3 {
-      margin-top: 30px;
-      color: #004085;
-    }
   </style>
 </head>
 <body>
@@ -125,13 +106,11 @@
   <div class="input-group">
     <div style="flex: 1">
       <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
-      <input type="file" id="contas" accept=".xlsx,.xls" onchange="carregarArquivo(this, 'excelProgress')">
-      <div class="progress-container" id="excelProgress"><div class="progress-bar"></div></div>
+      <input type="file" id="contas" accept=".xlsx,.xls">
     </div>
     <div style="flex: 1">
       <label><strong>DDA (PDF)</strong></label><br>
-      <input type="file" id="ddaPdf" accept=".pdf" onchange="carregarArquivo(this, 'pdfProgress')">
-      <div class="progress-container" id="pdfProgress"><div class="progress-bar"></div></div>
+      <input type="file" id="ddaPdf" accept=".pdf">
     </div>
     <div style="display: flex; align-items: flex-end">
       <button onclick="executarConciliacao()">Conciliar</button>
@@ -140,35 +119,21 @@
 
   <input type="text" id="searchBox" placeholder="Pesquisar por fornecedor ou valor..." oninput="filtrarTabela()">
   <div id="status"></div>
-
   <div id="previewDDA"></div>
   <div id="resultado"></div>
 </div>
 
 <script>
-  function carregarArquivo(input, barraId) {
-    const container = document.getElementById(barraId);
-    const barra = container.querySelector(".progress-bar");
-    container.style.display = 'block';
-    barra.style.width = "0%";
-    let progress = 0;
-    const intervalo = setInterval(() => {
-      progress += 10;
-      barra.style.width = progress + "%";
-      if (progress >= 100) {
-        clearInterval(intervalo);
-        setTimeout(() => container.style.display = 'none', 500);
-      }
-    }, 50);
-  }
+  document.getElementById("ddaPdf").addEventListener("change", async function () {
+    const file = this.files[0];
+    if (!file) return;
 
-  function mostrarStatus(msg) {
-    document.getElementById("status").innerText = msg;
-  }
+    const texto = await lerTextoDoPDF(file);
+    const dados = extrairLinhasValidas(texto);
 
-  function limparStatus() {
-    document.getElementById("status").innerText = "";
-  }
+    exibirPreviewDDA(dados);
+    exportarParaExcel(dados);
+  });
 
   async function lerTextoDoPDF(file) {
     return new Promise((resolve, reject) => {
@@ -217,6 +182,13 @@
     document.getElementById("previewDDA").innerHTML = html;
   }
 
+  function exportarParaExcel(dados) {
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DDA Extraído");
+    XLSX.writeFile(wb, "DDA_extraido.xlsx");
+  }
+
   function lerContas(file, callback) {
     const reader = new FileReader();
     reader.onload = e => {
@@ -241,12 +213,10 @@
     const fileContas = document.getElementById('contas').files[0];
     const fileDDA = document.getElementById('ddaPdf').files[0];
     if (!fileContas || !fileDDA) return alert("Selecione os dois arquivos.");
-    mostrarStatus("Processando conciliação...");
+    document.getElementById("status").innerText = "Processando conciliação...";
 
     const textoPDF = await lerTextoDoPDF(fileDDA);
     const dadosDDA = extrairLinhasValidas(textoPDF);
-    exibirPreviewDDA(dadosDDA);
-
     lerContas(fileContas, dadosContas => {
       const valoresContas = dadosContas.map(e => e.valor);
       const valoresDDA = dadosDDA.map(e => e.valor);
@@ -280,7 +250,7 @@
 
       html += "</table>";
       document.getElementById("resultado").innerHTML = html;
-      limparStatus();
+      document.getElementById("status").innerText = "";
     });
   }
 
