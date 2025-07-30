@@ -13,17 +13,21 @@
     }
     h1 {
       text-align: center;
+      margin-bottom: 30px;
     }
     .input-group {
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 30px;
       flex-wrap: wrap;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
     }
     input[type="file"], button {
       padding: 10px;
       font-size: 16px;
+    }
+    button {
+      cursor: pointer;
     }
     table {
       width: 100%;
@@ -72,13 +76,12 @@
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
       const resultados = [];
-      for (let i = 10; i < data.length; i++) {
+      for (let i = 0; i < data.length; i++) {
         const linha = data[i];
         if (!linha || linha.length < 9) continue;
-        const fornecedor = (linha[4] || "").toString().trim().toUpperCase();
         const valor = parseFloat(linha[8]);
-        if (fornecedor && !isNaN(valor)) {
-          resultados.push({ fornecedor, valor: valor.toFixed(2) });
+        if (!isNaN(valor)) {
+          resultados.push(valor.toFixed(2));
         }
       }
       callback(resultados);
@@ -86,7 +89,7 @@
     reader.readAsArrayBuffer(file);
   }
 
-  function lerDDApdf(file, callback) {
+  function lerPDF(file, callback) {
     const reader = new FileReader();
     reader.onload = function () {
       const typedarray = new Uint8Array(this.result);
@@ -107,21 +110,20 @@
 
         Promise.all(promises).then(function () {
           const linhas = allText.split('\n');
-          const resultados = [];
+          const valores = [];
 
           linhas.forEach(l => {
-            const partes = l.match(/(.+?)\s+(\d{1,3}(?:\.\d{3})*,\d{2})$/);
-            if (partes) {
-              const fornecedor = partes[1].trim().toUpperCase();
-              const valorStr = partes[2].replace(/\./g, '').replace(',', '.');
+            const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/); // Valor no fim
+            if (match) {
+              const valorStr = match[1].replace(/\./g, '').replace(',', '.');
               const valor = parseFloat(valorStr);
               if (!isNaN(valor)) {
-                resultados.push({ fornecedor, valor: valor.toFixed(2) });
+                valores.push(valor.toFixed(2));
               }
             }
           });
 
-          callback(resultados);
+          callback(valores);
         });
       });
     };
@@ -138,18 +140,17 @@
     }
 
     lerContas(fileContas, dadosContas => {
-      lerDDApdf(fileDDA, dadosDDA => {
-        const chavesContas = dadosContas.map(item => item.valor);
-        const chavesDDA = dadosDDA.map(item => item.valor);
-
-        const todasChaves = new Set([...chavesContas, ...chavesDDA]);
+      lerPDF(fileDDA, dadosDDA => {
+        const setContas = new Set(dadosContas);
+        const setDDA = new Set(dadosDDA);
+        const todosValores = new Set([...dadosContas, ...dadosDDA]);
 
         let html = `<table>
-          <tr><th>Valor</th><th>Status</th></tr>`;
+          <tr><th>Valor (R$)</th><th>Status</th></tr>`;
 
-        todasChaves.forEach(valor => {
-          const emContas = chavesContas.includes(valor);
-          const emDDA = chavesDDA.includes(valor);
+        todosValores.forEach(valor => {
+          const emContas = setContas.has(valor);
+          const emDDA = setDDA.has(valor);
           let status = '';
           let classe = '';
 
@@ -157,15 +158,15 @@
             status = '✔ OK';
             classe = 'match';
           } else if (emContas) {
-            status = '✖ SÓ CONTAS';
+            status = '✖ Só Contas a Pagar';
             classe = 'mismatch';
           } else {
-            status = '✖ SÓ DDA';
+            status = '✖ Só DDA';
             classe = 'mismatch';
           }
 
           html += `<tr class="${classe}">
-            <td>${parseFloat(valor).toFixed(2)}</td>
+            <td>${valor}</td>
             <td>${status}</td>
           </tr>`;
         });
