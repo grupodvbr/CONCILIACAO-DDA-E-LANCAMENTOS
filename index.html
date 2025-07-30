@@ -97,6 +97,12 @@
       margin-top: 20px;
       margin-bottom: 10px;
     }
+
+    #status {
+      font-weight: bold;
+      margin-top: 15px;
+      color: #007bff;
+    }
   </style>
 </head>
 <body>
@@ -110,11 +116,11 @@
   <div class="input-group">
     <div style="flex: 1">
       <label><strong>Contas a Pagar (.xlsx)</strong></label><br>
-      <input type="file" id="contas" accept=".xlsx,.xls">
+      <input type="file" id="contas" accept=".xlsx,.xls" onchange="mostrarStatus('Lendo Excel...')">
     </div>
     <div style="flex: 1">
       <label><strong>DDA (PDF)</strong></label><br>
-      <input type="file" id="ddaPdf" accept=".pdf">
+      <input type="file" id="ddaPdf" accept=".pdf" onchange="mostrarStatus('Lendo PDF...')">
     </div>
     <div style="display: flex; align-items: flex-end">
       <button onclick="executarConciliacao()">Conciliar</button>
@@ -122,13 +128,22 @@
   </div>
 
   <input type="text" id="searchBox" placeholder="Pesquisar por fornecedor ou valor..." oninput="filtrarTabela()">
+  <div id="status"></div>
   <div id="resultado"></div>
 </div>
 
 <script>
+  function mostrarStatus(msg) {
+    document.getElementById("status").innerText = msg;
+  }
+
+  function limparStatus() {
+    document.getElementById("status").innerText = "";
+  }
+
   async function lerTextoDoPDF(file) {
-    const reader = new FileReader();
     return new Promise((resolve, reject) => {
+      const reader = new FileReader();
       reader.onload = function () {
         const typedArray = new Uint8Array(reader.result);
         pdfjsLib.getDocument({ data: typedArray }).promise.then(async pdf => {
@@ -178,7 +193,7 @@
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       const lista = [];
-      for (let i = 10; i < data.length; i++) {
+      for (let i = 1; i < data.length; i++) { // Lê desde a linha 1
         const linha = data[i];
         const fornecedor = (linha[4] || "").toString().trim().toUpperCase();
         const valor = parseFloat(linha[8]);
@@ -195,7 +210,7 @@
     const fileContas = document.getElementById('contas').files[0];
     const fileDDA = document.getElementById('ddaPdf').files[0];
     if (!fileContas || !fileDDA) return alert("Selecione os dois arquivos.");
-    document.getElementById("resultado").innerHTML = "<p>Lendo PDF... aguarde.</p>";
+    mostrarStatus("Processando conciliação...");
 
     const textoPDF = await lerTextoDoPDF(fileDDA);
     const dadosDDA = extrairLinhasValidas(textoPDF);
@@ -215,8 +230,18 @@
       });
       html += "</table>";
       document.getElementById("resultado").innerHTML = html;
+      limparStatus();
     });
   }
 
   function filtrarTabela() {
-    const termo = document.getElementById("searchBox").value.toLowerCa
+    const termo = document.getElementById("searchBox").value.toLowerCase();
+    const linhas = document.querySelectorAll("#tabela tr");
+    for (let i = 1; i < linhas.length; i++) {
+      const texto = linhas[i].innerText.toLowerCase();
+      linhas[i].style.display = texto.includes(termo) ? "" : "none";
+    }
+  }
+</script>
+</body>
+</html>
