@@ -159,7 +159,7 @@
     </button>
 
     <button onclick="conciliar()">Comparar</button>
-    <button class="limpar" onclick="limparHistorico()">Limpar Histórico</button>
+    <button class="limpar limpar" onclick="limparHistorico()">Limpar Histórico</button>
   </div>
 
   <main>
@@ -251,17 +251,14 @@
             }
             Promise.all(promises).then(function () {
               const linhas = allText.split('\n');
-              linhas.forEach((l, i) => {
-                const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
+              linhas.forEach((linha) => {
+                const match = linha.match(/(.+?)\s+[\w\/\.\-]+?\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{1,3}(?:\.\d{3})*,\d{2})$/);
                 if (match) {
-                  const valorStr = match[1].replace(/\./g, '').replace(',', '.');
+                  const fornecedor = match[1].trim();
+                  const data = match[2].trim();
+                  const valorStr = match[3].replace(/\./g, '').replace(',', '.');
                   const valor = parseFloat(valorStr);
                   if (!isNaN(valor)) {
-                    const data = (linhas[i - 1] || '').trim();
-                    let fornecedor = (linhas[i - 2] || '').trim();
-                    if (!isNaN(fornecedor.replace(/[^\d]/g, '')) || fornecedor.match(/\d{2}\/\d{2}\/\d{4}/)) {
-                      fornecedor = (linhas[i - 3] || '').trim();
-                    }
                     resultados.push({ valor: valor.toFixed(2), fornecedor, data });
                   }
                 }
