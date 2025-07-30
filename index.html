@@ -221,7 +221,7 @@
         if (!linha || linha.length < 9) continue;
         const valor = parseFloat(linha[8]);
         const fornecedor = linha[4] || '';
-        const dataLanc = linha[5] || '';
+        const dataLanc = linha[6] || '';
         const cod = linha[1] || '';
         if (!isNaN(valor)) {
           resultados.push({ valor: valor.toFixed(2), fornecedor, data: dataLanc, cod });
