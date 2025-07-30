@@ -1,4 +1,185 @@
-<!-- ... (mesmo <head> e estilos anteriores, sem mudanças aqui) -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Conferência de Lançamentos F360 X DDA</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 10px 20px;
+      border-bottom: 2px solid #ccc;
+      background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    header img {
+      height: 40px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.6em;
+      font-weight: bold;
+    }
+    .topo-fixo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: #f8f8f8;
+      position: sticky;
+      top: 62px;
+      z-index: 999;
+      border-bottom: 1px solid #ddd;
+    }
+    .topo-fixo label,
+    .topo-fixo input[type="file"] {
+      display: none;
+    }
+    .topo-fixo button {
+      padding: 6px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .topo-fixo .limpar {
+      background-color: #dc3545;
+    }
+    .topo-fixo small {
+      font-size: 10px;
+      color: #fff;
+      max-width: 120px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    main {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      height: calc(100vh - 160px);
+      box-sizing: border-box;
+    }
+    .coluna {
+      flex: 1;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+    .coluna-header {
+      padding: 10px;
+      font-size: 1.2em;
+      font-weight: bold;
+      border-bottom: 1px solid #ccc;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .coluna-scroll {
+      overflow-y: auto;
+      padding: 10px;
+    }
+    .card {
+      border: 2px solid #ccc;
+      border-left: 5px solid orange;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .match {
+      border-left-color: green;
+      background: #e9fbe9;
+    }
+    .valor {
+      font-weight: bold;
+    }
+    #totais {
+      padding: 10px 20px;
+      font-weight: bold;
+      background: #fff;
+      border-top: 1px solid #ccc;
+    }
+    #qtdeConciliado {
+      color: green;
+    }
+    #qtdePendente {
+      color: orange;
+    }
+    #valorConciliado {
+      background: green;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    #valorPendente {
+      background: orange;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" alt="Logo CB Systems" />
+    <h1>Conferência de Lançamentos F360 X DDA</h1>
+  </header>
+
+  <div class="topo-fixo">
+    <input type="file" id="contas" accept=".xlsx,.xls" onchange="mostrarArquivo('contas')" />
+    <button onclick="document.getElementById('contas').click()" id="btnExcel">
+      <div>Escolher Arquivo Excel</div>
+      <small id="nomeExcel"></small>
+    </button>
+
+    <input type="file" id="dda" accept="application/pdf" multiple onchange="mostrarArquivo('dda')" />
+    <button onclick="document.getElementById('dda').click()" id="btnPDF">
+      <div>Escolher Arquivo PDF</div>
+      <small id="nomePDF"></small>
+    </button>
+
+    <button onclick="conciliar()">Comparar</button>
+    <button class="limpar" onclick="limparHistorico()">Limpar Histórico</button>
+  </div>
+
+  <main>
+    <div class="coluna">
+      <div class="coluna-header">Contas a pagar F360</div>
+      <div class="coluna-scroll" id="sistema"></div>
+    </div>
+    <div class="coluna">
+      <div class="coluna-header">Boletos no DDA</div>
+      <div class="coluna-scroll" id="banco"></div>
+    </div>
+  </main>
+
+  <div id="totais">
+    Consolidados: <span id="qtdeConciliado">0</span> |
+    Pendentes: <span id="qtdePendente">0</span> |
+    Valor Conciliado: <span id="valorConciliado">R$ 0,00</span> |
+    Valor Pendente: <span id="valorPendente">R$ 0,00</span>
+  </div>
 
 <script>
   function mostrarArquivo(tipo) {
