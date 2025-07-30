@@ -80,7 +80,7 @@
         const linha = data[i];
         if (!linha || linha.length < 9) continue;
         const valor = parseFloat(linha[8]);
-        const fornecedor = linha[1] || ''; // Coluna B = fornecedor
+        const fornecedor = linha[2] || ''; // Correto: coluna C = índice 2
         if (!isNaN(valor)) {
           resultados.push({ valor: valor.toFixed(2), fornecedor });
         }
@@ -122,7 +122,7 @@
                 const partes = l.split(' ');
                 partes.pop(); // valor
                 partes.pop(); // vencimento
-                partes.pop(); // documento
+                partes.pop(); // documento (ou parte dele)
                 const fornecedor = partes.join(' ').trim();
                 resultados.push({ valor: valor.toFixed(2), fornecedor });
               }
