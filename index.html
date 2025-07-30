@@ -43,9 +43,9 @@
       background-color: #d4edda;
       color: #155724;
     }
-    .mismatch {
-      background-color: #f8d7da;
-      color: #721c24;
+    .partial {
+      background-color: #fff3cd;
+      color: #856404;
     }
   </style>
 </head>
@@ -66,9 +66,7 @@
 </div>
 
 <div id="resultado"></div>
-<!-- Apenas o trecho JS e HTML relevantes foram modificados -->
 
-<!-- Substitua o script inteiro pelo novo abaixo -->
 <script>
   function lerContas(file, callback) {
     const reader = new FileReader();
@@ -82,7 +80,7 @@
         const linha = data[i];
         if (!linha || linha.length < 9) continue;
         const valor = parseFloat(linha[8]);
-        const fornecedor = linha[1] || ''; // Coluna 1: fornecedor
+        const fornecedor = linha[1] || ''; // Coluna B
         if (!isNaN(valor)) {
           resultados.push({ valor: valor.toFixed(2), fornecedor });
         }
@@ -116,12 +114,12 @@
           const resultados = [];
 
           linhas.forEach((l, i) => {
-            const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/); // Valor no fim
+            const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
             if (match) {
               const valorStr = match[1].replace(/\./g, '').replace(',', '.');
               const valor = parseFloat(valorStr);
               if (!isNaN(valor)) {
-                const fornecedor = (linhas[i - 1] || '').trim(); // Linha anterior como fornecedor
+                const fornecedor = (linhas[i - 1] || '').trim();
                 resultados.push({ valor: valor.toFixed(2), fornecedor });
               }
             }
@@ -145,42 +143,47 @@
 
     lerContas(fileContas, dadosContas => {
       lerPDF(fileDDA, dadosDDA => {
-        const mapContas = new Map(dadosContas.map(d => [d.valor, d.fornecedor]));
-        const mapDDA = new Map(dadosDDA.map(d => [d.valor, d.fornecedor]));
-
-        const todosValores = new Set([...dadosContas.map(d => d.valor), ...dadosDDA.map(d => d.valor)]);
+        const usadosDDA = new Array(dadosDDA.length).fill(false);
 
         let html = `<table>
           <tr>
             <th>Valor (R$)</th>
             <th>Status</th>
-            <th>Fornecedor Contas</th>
+            <th>Fornecedor Contas a Pagar</th>
             <th>Fornecedor DDA</th>
           </tr>`;
 
-        todosValores.forEach(valor => {
-          const emContas = mapContas.has(valor);
-          const emDDA = mapDDA.has(valor);
-          let status = '';
-          let classe = '';
+        dadosContas.forEach(conta => {
+          let indexMatch = dadosDDA.findIndex((dda, idx) => !usadosDDA[idx] && dda.valor === conta.valor);
+          let status, classe, fornecedorDDA = '';
 
-          if (emContas && emDDA) {
+          if (indexMatch !== -1) {
             status = '✔ OK';
             classe = 'match';
-          } else if (emContas) {
-            status = '✖ Só Contas a Pagar';
-            classe = 'mismatch';
+            fornecedorDDA = dadosDDA[indexMatch].fornecedor;
+            usadosDDA[indexMatch] = true;
           } else {
-            status = '✖ Só DDA';
-            classe = 'mismatch';
+            status = '✖ Só Contas a Pagar';
+            classe = 'partial';
           }
 
           html += `<tr class="${classe}">
-            <td>${valor}</td>
+            <td>${conta.valor}</td>
             <td>${status}</td>
-            <td>${mapContas.get(valor) || ''}</td>
-            <td>${mapDDA.get(valor) || ''}</td>
+            <td>${conta.fornecedor}</td>
+            <td>${fornecedorDDA}</td>
           </tr>`;
+        });
+
+        dadosDDA.forEach((dda, idx) => {
+          if (!usadosDDA[idx]) {
+            html += `<tr class="partial">
+              <td>${dda.valor}</td>
+              <td>✖ Só DDA</td>
+              <td></td>
+              <td>${dda.fornecedor}</td>
+            </tr>`;
+          }
         });
 
         html += "</table>";
@@ -190,4 +193,5 @@
   }
 </script>
 
+</body>
 </html>
