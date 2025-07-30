@@ -6,7 +6,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
   <script>
-    // Configuração do worker do PDF.js
     window.pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
   </script>
@@ -17,7 +16,6 @@
       margin: 0;
       padding: 0;
     }
-
     header {
       background-color: #ffffff;
       color: #000000;
@@ -28,7 +26,6 @@
       position: relative;
       border-bottom: 1px solid #ccc;
     }
-
     header img {
       height: 50px;
       position: absolute;
@@ -36,12 +33,10 @@
       top: 50%;
       transform: translateY(-50%);
     }
-
     .header-title {
       font-size: 1.6em;
       font-weight: bold;
     }
-
     .container {
       max-width: 1100px;
       margin: 40px auto;
@@ -50,7 +45,6 @@
       border-radius: 12px;
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     }
-
     .input-group {
       display: flex;
       flex-wrap: wrap;
@@ -58,57 +52,47 @@
       margin-bottom: 20px;
       justify-content: space-between;
     }
-
     input[type="file"], button, input[type="text"] {
       padding: 10px;
       font-size: 16px;
       border-radius: 8px;
       border: 1px solid #ccc;
     }
-
     button {
       background-color: #28a745;
       color: white;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #218838;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
     }
-
     th {
       background-color: #004085;
       color: white;
       padding: 10px;
     }
-
     td {
       padding: 10px;
       text-align: center;
     }
-
     tr:nth-child(even) { background-color: #f2f2f2; }
     .match { background-color: #d4edda; color: #155724; }
     .mismatch { background-color: #f8d7da; color: #721c24; }
-
     #searchBox {
       width: 100%;
       margin-top: 20px;
       margin-bottom: 10px;
     }
-
     #status {
       font-weight: bold;
       margin-top: 15px;
       color: #007bff;
     }
-
     .progress-container {
       width: 100%;
       background: #ddd;
@@ -118,14 +102,12 @@
       margin-top: 4px;
       display: none;
     }
-
     .progress-bar {
       height: 100%;
       width: 0%;
       background: #28a745;
       transition: width 0.3s ease;
     }
-
     h3 {
       margin-top: 30px;
       color: #004085;
@@ -159,7 +141,7 @@
   <input type="text" id="searchBox" placeholder="Pesquisar por fornecedor ou valor..." oninput="filtrarTabela()">
   <div id="status"></div>
 
-  <div id="previewDDA"></div> <!-- Prévia do PDF -->
+  <div id="previewDDA"></div>
   <div id="resultado"></div>
 </div>
 
@@ -213,22 +195,16 @@
     const linhas = texto.split('\n');
     const resultado = [];
     const padrao = /(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+([\d.]+,\d{2})$/;
-
     for (let linha of linhas) {
       const match = linha.trim().match(padrao);
       if (match) {
-        const fornecedor = match[1]
-          .replace(/[^\w\s\-\.]/gi, '')
-          .replace(/\s{2,}/g, ' ')
-          .trim()
-          .toUpperCase();
+        const fornecedor = match[1].replace(/[^\w\s\-\.]/gi, '').replace(/\s{2,}/g, ' ').trim().toUpperCase();
         const valor = parseFloat(match[3].replace(/\./g, '').replace(',', '.'));
         if (!isNaN(valor)) {
           resultado.push({ fornecedor, valor: valor.toFixed(2) });
         }
       }
     }
-
     return resultado;
   }
 
@@ -272,18 +248,36 @@
     exibirPreviewDDA(dadosDDA);
 
     lerContas(fileContas, dadosContas => {
-      const chavesContas = dadosContas.map(e => e.fornecedor + "|" + e.valor);
-      const chavesDDA = dadosDDA.map(e => e.fornecedor + "|" + e.valor);
-      const todasChaves = new Set([...chavesContas, ...chavesDDA]);
-      let html = "<table id='tabela'><tr><th>Fornecedor</th><th>Valor</th><th>Status</th></tr>";
-      todasChaves.forEach(chave => {
-        const [fornecedor, valor] = chave.split("|");
-        const emContas = chavesContas.includes(chave);
-        const emDDA = chavesDDA.includes(chave);
-        const status = emContas && emDDA ? "✔ OK" : emContas ? "✖ SÓ CONTAS" : "✖ SÓ DDA";
-        const classe = emContas && emDDA ? "match" : "mismatch";
-        html += `<tr class="${classe}"><td>${fornecedor}</td><td>${valor}</td><td>${status}</td></tr>`;
+      const valoresContas = dadosContas.map(e => e.valor);
+      const valoresDDA = dadosDDA.map(e => e.valor);
+      const todosValores = new Set([...valoresContas, ...valoresDDA]);
+
+      let html = "<table id='tabela'><tr><th>Valor</th><th>Fornecedor</th><th>Status</th></tr>";
+      todosValores.forEach(valor => {
+        const linhaDDA = dadosDDA.find(e => e.valor === valor);
+        const linhaContas = dadosContas.find(e => e.valor === valor);
+
+        let fornecedor = "";
+        let status = "";
+        let classe = "";
+
+        if (linhaDDA && linhaContas) {
+          fornecedor = linhaDDA.fornecedor || linhaContas.fornecedor;
+          status = "✔ OK";
+          classe = "match";
+        } else if (linhaContas) {
+          fornecedor = linhaContas.fornecedor;
+          status = "✖ SÓ CONTAS";
+          classe = "mismatch";
+        } else if (linhaDDA) {
+          fornecedor = linhaDDA.fornecedor;
+          status = "✖ SÓ DDA";
+          classe = "mismatch";
+        }
+
+        html += `<tr class="${classe}"><td>${valor}</td><td>${fornecedor}</td><td>${status}</td></tr>`;
       });
+
       html += "</table>";
       document.getElementById("resultado").innerHTML = html;
       limparStatus();
