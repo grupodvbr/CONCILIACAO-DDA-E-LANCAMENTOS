@@ -64,7 +64,7 @@
 
 <header>
   <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" alt="Logo CB Systems">
-  <h1>Conciliação DDA x Contas a Pagar</h1>
+  <h1>Painel de Requisições Delícia Gourmet</h1>
 </header>
 
 <div class="input-group">
@@ -93,8 +93,8 @@
       for (let i = 1; i < data.length; i++) {
         const linha = data[i];
         if (!linha || linha.length < 9) continue;
-        const valor = parseFloat(linha[8]); // Coluna I
-        const fornecedor = linha[5] || '';   // Coluna F: Cliente / Fornecedor
+        const valor = parseFloat(linha[8]); // Coluna I = índice 8
+        const fornecedor = linha[6] || '';   // Coluna G = índice 6
         if (!isNaN(valor)) {
           resultados.push({ valor: valor.toFixed(2), fornecedor });
         }
