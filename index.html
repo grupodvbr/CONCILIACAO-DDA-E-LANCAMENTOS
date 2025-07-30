@@ -105,6 +105,14 @@
       padding: 10px 20px;
       font-weight: bold;
     }
+    #valorConciliado {
+      color: green;
+      font-weight: bold;
+    }
+    #valorPendente {
+      color: orange;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -132,7 +140,12 @@
       <div class="coluna-scroll" id="banco"></div>
     </div>
   </main>
-  <div id="totais">Consolidados: 0 | Pendentes: 0 | Valor Conciliado: R$ 0,00 | Valor Pendente: R$ 0,00</div>
+  <div id="totais">
+    Consolidados: <span id="qtdeConciliado">0</span> |
+    Pendentes: <span id="qtdePendente">0</span> |
+    Valor Conciliado: <span id="valorConciliado">R$ 0,00</span> |
+    Valor Pendente: <span id="valorPendente">R$ 0,00</span>
+  </div>
   <script>
     function limparHistorico() {
       localStorage.clear();
