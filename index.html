@@ -2,361 +2,267 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Conferência de Lançamentos F360 X DDA</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Metas de Receita - Grupo DV</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #e8f5e9;
       margin: 0;
-      padding: 0;
-      background: #f5f5f5;
+      padding: 20px;
     }
-    header {
+    h1 {
+      text-align: center;
+    }
+    .filtros {
+      max-width: 600px;
+      margin: 0 auto 10px;
       display: flex;
-      align-items: center;
-      gap: 15px;
-      padding: 10px 20px;
-      border-bottom: 2px solid #ccc;
-      background: #fff;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-    header img {
-      height: 40px;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 1.6em;
-      font-weight: bold;
-    }
-    .topo-fixo {
-      display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       gap: 10px;
-      padding: 10px 20px;
-      background: #f8f8f8;
-      position: sticky;
-      top: 62px;
-      z-index: 999;
-      border-bottom: 1px solid #ddd;
-    }
-    .topo-fixo label,
-    .topo-fixo input[type="file"] {
-      display: none;
-    }
-    .topo-fixo button {
-      padding: 6px 15px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
     }
-    .topo-fixo .limpar {
-      background-color: #dc3545;
-    }
-    .topo-fixo small {
-      font-size: 10px;
-      color: #fff;
-      max-width: 120px;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    main {
-      display: flex;
-      gap: 20px;
-      padding: 20px;
-      height: calc(100vh - 160px);
-      box-sizing: border-box;
-    }
-    .coluna {
-      flex: 1;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    .filtros label {
       display: flex;
       flex-direction: column;
-      height: 100%;
-      overflow: hidden;
+      font-size: 0.9em;
     }
-    .coluna-header {
-      padding: 10px;
-      font-size: 1.2em;
-      font-weight: bold;
-      border-bottom: 1px solid #ccc;
-      background: #fff;
-      flex-shrink: 0;
+    .filtros input, .filtros select {
+      padding: 8px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
-    .coluna-scroll {
-      overflow-y: auto;
-      padding: 10px;
-    }
-    .card {
-      border: 2px solid #ccc;
-      border-left: 5px solid orange;
+    #btnWhats {
+      background-color: #25d366;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 1em;
       border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-      background: #fff;
+      cursor: pointer;
+      display: block;
+      margin: 10px auto 10px;
     }
-    .match {
-      border-left-color: green;
-      background: #e9fbe9;
+    .metas-box {
+      background: #d0f0d5;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px auto;
+      max-width: 600px;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
     }
-    .valor {
-      font-weight: bold;
+    .metas-box h2 {
+      margin: 0 0 10px;
     }
-    #totais {
-      padding: 10px 20px;
-      font-weight: bold;
-      background: #fff;
-      border-top: 1px solid #ccc;
+    .metas-box p {
+      margin: 3px 0;
+      font-size: 0.95em;
     }
-    #qtdeConciliado {
-      color: green;
-    }
-    #qtdePendente {
-      color: orange;
-    }
-    #valorConciliado {
-      background: green;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    #valorPendente {
-      background: orange;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
+    #graficoContainer {
+      max-width: 700px;
+      margin: 20px auto;
     }
   </style>
 </head>
 <body>
-  <header>
-    <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" alt="Logo CB Systems" />
-    <h1>Conferência de Lançamentos F360 X DDA</h1>
-  </header>
 
-  <div class="topo-fixo">
-    <input type="file" id="contas" accept=".xlsx,.xls" onchange="mostrarArquivo('contas')" />
-    <button onclick="document.getElementById('contas').click()" id="btnExcel">
-      <div>Escolher Arquivo Excel</div>
-      <small id="nomeExcel"></small>
-    </button>
+<h1>📊 Painel de Metas - Grupo DV</h1>
 
-    <input type="file" id="dda" accept="application/pdf" multiple onchange="mostrarArquivo('dda')" />
-    <button onclick="document.getElementById('dda').click()" id="btnPDF">
-      <div>Escolher Arquivo PDF</div>
-      <small id="nomePDF"></small>
-    </button>
+<div class="filtros">
+  <label>
+    Data Início:
+    <input type="date" id="dataInicio">
+  </label>
+  <label>
+    Data Fim:
+    <input type="date" id="dataFim">
+  </label>
+  <label>
+    Empresa:
+    <select id="empresaFiltro">
+      <option value="">Todas</option>
+    </select>
+  </label>
+  <button onclick="carregarMetas()">Filtrar</button>
+</div>
 
-    <button onclick="conciliar()">Comparar</button>
-    <button class="limpar" onclick="limparHistorico()">Limpar Histórico</button>
-  </div>
+<button id="btnWhats">📲 Enviar via WhatsApp</button>
 
-  <main>
-    <div class="coluna">
-      <div class="coluna-header">Contas a pagar F360</div>
-      <div class="coluna-scroll" id="sistema"></div>
-    </div>
-    <div class="coluna">
-      <div class="coluna-header">Boletos no DDA</div>
-      <div class="coluna-scroll" id="banco"></div>
-    </div>
-  </main>
-
-  <div id="totais">
-    Consolidados: <span id="qtdeConciliado">0</span> |
-    Pendentes: <span id="qtdePendente">0</span> |
-    Valor Conciliado: <span id="valorConciliado">R$ 0,00</span> |
-    Valor Pendente: <span id="valorPendente">R$ 0,00</span>
-  </div>
+<div id="painelMetas"></div>
+<div id="graficoContainer">
+  <canvas id="graficoFaturamento"></canvas>
+</div>
 
 <script>
-  function mostrarArquivo(tipo) {
-    const input = document.getElementById(tipo);
-    let nomes = '';
+const urlBase = 'https://script.google.com/macros/s/AKfycbzyiL6yNCj_FYWiQ2PS88mthToCvWM1wJ0q7CQy8asyg-59L8YezKzFY6d-lgQU0ni3/exec';
+let chart;
 
-    if (tipo === 'dda') {
-      nomes = Array.from(input.files).map(f => f.name).join(', ');
-      document.getElementById('nomePDF').innerText = nomes;
-    } else {
-      nomes = input.files.length ? input.files[0].name : '';
-      document.getElementById('nomeExcel').innerText = nomes;
+function formatarNumero(valor) {
+  return parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function formatarDataBR(dataISO) {
+  const [y, m, d] = dataISO.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function preencherDataOntem() {
+  const ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const data = ontem.toISOString().split('T')[0];
+  document.getElementById("dataInicio").value = data;
+  document.getElementById("dataFim").value = data;
+}
+
+async function carregarMetas() {
+  const painel = document.getElementById("painelMetas");
+  painel.innerHTML = "Carregando...";
+
+  const dataInicio = document.getElementById("dataInicio").value;
+  const dataFim = document.getElementById("dataFim").value;
+  const empresa = document.getElementById("empresaFiltro").value;
+
+  const hoje = new Date();
+  const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+  const diasCorridosNoMes = ultimoDiaMes.getDate(); // ex: 31
+  const diasCorridosAteHoje = hoje.getDate();       // ex: 29
+
+  const params = new URLSearchParams();
+  if (dataInicio) params.append("dataInicio", dataInicio);
+  if (dataFim) params.append("dataFim", dataFim);
+  if (empresa) params.append("empresa", empresa);
+
+  try {
+    const resposta = await fetch(`${urlBase}?${params.toString()}`);
+    const metas = await resposta.json();
+
+    const empresas = [...new Set(metas.map(m => m.Empresa))];
+    const select = document.getElementById("empresaFiltro");
+    if (select.options.length <= 1) {
+      empresas.forEach(e => {
+        const opt = document.createElement("option");
+        opt.value = e;
+        opt.textContent = e;
+        select.appendChild(opt);
+      });
     }
-  }
 
-  function limparHistorico() {
-    localStorage.removeItem('contas');
-    localStorage.removeItem('dda');
-    location.reload();
-  }
-
-  function salvarLocal(nome, dados) {
-    localStorage.setItem(nome, JSON.stringify(dados));
-  }
-
-  function lerLocal(nome) {
-    return JSON.parse(localStorage.getItem(nome) || '[]');
-  }
-
-  function lerContas(file, callback) {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const resultados = [];
-      for (let i = 1; i < data.length; i++) {
-        const linha = data[i];
-        if (!linha || linha.length < 9) continue;
-        const valor = parseFloat(linha[8]);
-        const fornecedor = linha[4] || '';
-        const dataLanc = linha[6] || '';
-        const cod = linha[1] || '';
-        if (!isNaN(valor)) {
-          resultados.push({ valor: valor.toFixed(2), fornecedor, data: dataLanc, cod });
-        }
-      }
-      salvarLocal('contas', resultados);
-      callback(resultados);
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function lerPDFs(files, callbackFinal) {
-    let resultados = [];
-    let arquivosLidos = 0;
-    for (const file of files) {
-      const reader = new FileReader();
-      reader.onload = function () {
-        const typedarray = new Uint8Array(this.result);
-        pdfjsLib.getDocument({ data: typedarray }).promise.then(function (pdf) {
-          let allText = '';
-          let promises = [];
-          for (let i = 1; i <= pdf.numPages; i++) {
-            promises.push(
-              pdf.getPage(i).then(page => page.getTextContent().then(tc => {
-                const strings = tc.items.map(item => item.str);
-                allText += strings.join('\n') + '\n';
-              }))
-            );
-          }
-          Promise.all(promises).then(function () {
-            const linhas = allText.split('\n');
-            linhas.forEach((l, i) => {
-              const match = l.match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
-              if (match) {
-                const valorStr = match[1].replace(/\./g, '').replace(',', '.');
-                const valor = parseFloat(valorStr);
-                if (!isNaN(valor)) {
-                  const data = (linhas[i - 1] || '').trim();
-                  const fornecedor = (linhas[i - 2] || '').trim();
-                  resultados.push({ valor: valor.toFixed(2), fornecedor, data });
-                }
-              }
-            });
-            arquivosLidos++;
-            if (arquivosLidos === files.length) {
-              salvarLocal('dda', resultados);
-              callbackFinal(resultados);
-            }
-          });
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    }
-  }
-
-  function conciliar() {
-    const fileContas = document.getElementById('contas').files[0];
-    const filesDDA = document.getElementById('dda').files;
-    if (!fileContas || !filesDDA.length) {
-      alert("Selecione os dois arquivos.");
+    painel.innerHTML = "";
+    if (metas.length === 0) {
+      painel.innerHTML = "<p style='text-align:center'>Nenhum dado encontrado.</p>";
+      esconderGrafico();
       return;
     }
-    lerContas(fileContas, dadosContas => {
-      lerPDFs(filesDDA, dadosDDA => mostrarConciliacao(dadosContas, dadosDDA));
+
+    metas.forEach(linha => {
+      const previsto = parseFloat(linha["Previsto"]);
+      const realizado = parseFloat(linha["Realizado"].toString().replace(",", "."));
+      const atingido = previsto > 0 ? (realizado / previsto) * 100 : 0;
+      const previsaoFinal = (realizado / diasCorridosAteHoje) * diasCorridosNoMes;
+      const previsaoPercentual = previsto > 0 ? (previsaoFinal / previsto) * 100 : 0;
+
+      const div = document.createElement("div");
+      div.className = "metas-box";
+      div.innerHTML = `
+        <h2>${linha["Empresa"]}</h2>
+        <p>💰 Previsto: R$ ${formatarNumero(previsto)}</p>
+        <p>✅ Realizado: R$ ${formatarNumero(realizado)}</p>
+        <p>📊 Atingido: ${formatarNumero(atingido)}%</p>
+        <p>📈 Previsão: R$ ${formatarNumero(previsaoFinal)} (${formatarNumero(previsaoPercentual)}%)</p>
+      `;
+      painel.appendChild(div);
     });
+
+    if (empresa) mostrarGrafico(metas);
+    else esconderGrafico();
+
+  } catch (e) {
+    painel.innerHTML = "Erro ao carregar dados.";
+    console.error(e);
   }
+}
 
-  function mostrarConciliacao(dadosContas, dadosDDA) {
-    dadosContas.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
-    dadosDDA.sort((a, b) => parseFloat(a.valor) - parseFloat(b.valor));
+function mostrarGrafico(metas) {
+  const ctx = document.getElementById('graficoFaturamento').getContext('2d');
+  metas.sort((a, b) => new Date(a.Data) - new Date(b.Data));
+  const dias = metas.map(m => m["Data"]?.split("-").reverse().join("/"));
+  const valores = metas.map(m => parseFloat(m["Realizado"].toString().replace(",", ".")));
 
-    const usadosDDA = new Array(dadosDDA.length).fill(false);
-    const sistemaDiv = document.getElementById('sistema');
-    const bancoDiv = document.getElementById('banco');
-    sistemaDiv.innerHTML = '';
-    bancoDiv.innerHTML = '';
+  if (chart) chart.destroy();
 
-    let conciliados = 0;
-    let valorConciliado = 0;
-
-    const conciliadosContas = [];
-    const naoConciliadosContas = [];
-    dadosContas.forEach(conta => {
-      let index = dadosDDA.findIndex((dda, i) => !usadosDDA[i] && dda.valor === conta.valor);
-      if (index !== -1) {
-        usadosDDA[index] = true;
-        conciliados++;
-        valorConciliado += parseFloat(conta.valor);
-        conciliadosContas.push(conta);
-      } else {
-        naoConciliadosContas.push(conta);
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dias,
+      datasets: [{
+        label: 'Evolução do Faturamento',
+        data: valores,
+        fill: false,
+        borderColor: '#388e3c',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true },
+        title: {
+          display: true,
+          text: 'Evolução diária do faturamento'
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return 'R$ ' + value.toLocaleString('pt-BR');
+            }
+          }
+        }
       }
-    });
+    }
+  });
+}
 
-    [...conciliadosContas, ...naoConciliadosContas].forEach(conta => {
-      const match = conciliadosContas.includes(conta);
-      const card = `<div class="card ${match ? 'match' : ''}">
-        <div class="valor">${parseFloat(conta.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        <div>${conta.cod || ''}</div>
-        <div>${conta.fornecedor}</div>
-      </div>`;
-      sistemaDiv.innerHTML += card;
-    });
-
-    const conciliadosDDA = [];
-    const naoConciliadosDDA = [];
-    dadosDDA.forEach((dda, i) => {
-      if (usadosDDA[i]) {
-        conciliadosDDA.push(dda);
-      } else {
-        naoConciliadosDDA.push(dda);
-      }
-    });
-
-    [...conciliadosDDA, ...naoConciliadosDDA].forEach(dda => {
-      const match = conciliadosDDA.includes(dda);
-      const card = `<div class="card ${match ? 'match' : ''}">
-        <div class="valor">${parseFloat(dda.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} - ${dda.data || ''}</div>
-        <div>${dda.fornecedor || ''}</div>
-      </div>`;
-      bancoDiv.innerHTML += card;
-    });
-
-    const pendentes = dadosContas.length - conciliados;
-    const valorPendente = dadosContas.reduce((acc, el) => acc + parseFloat(el.valor), 0) - valorConciliado;
-
-    document.getElementById("qtdeConciliado").innerText = conciliados;
-    document.getElementById("qtdePendente").innerText = pendentes;
-    document.getElementById("valorConciliado").innerText = valorConciliado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById("valorPendente").innerText = valorPendente.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+function esconderGrafico() {
+  if (chart) {
+    chart.destroy();
+    chart = null;
   }
+}
 
-  window.onload = function () {
-    const contas = lerLocal('contas');
-    const dda = lerLocal('dda');
-    if (contas.length && dda.length) mostrarConciliacao(contas, dda);
-  }
+document.getElementById("btnWhats").addEventListener("click", () => {
+  const dataInicio = document.getElementById("dataInicio").value;
+  const dataFim = document.getElementById("dataFim").value;
+  const periodo = (dataInicio && dataFim)
+    ? `${formatarDataBR(dataInicio)} - ${formatarDataBR(dataFim)}`
+    : "Período não informado";
+
+  const blocos = document.querySelectorAll(".metas-box");
+  if (!blocos.length) return alert("Nenhum dado para enviar.");
+
+  let mensagem = `📆 Resumo da meta de receitas ${periodo}\n\n`;
+  blocos.forEach(box => {
+    const titulo = box.querySelector("h2").innerText;
+    const linhas = [...box.querySelectorAll("p")].map(p => p.innerText).join("\n");
+    mensagem += `*${titulo}*\n${linhas}\n\n`;
+  });
+
+  const numero = "5577999761436";
+  const link = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem.trim())}`;
+  window.open(link, "_blank");
+});
+
+window.onload = () => {
+  preencherDataOntem();
+  carregarMetas();
+};
 </script>
+
+</body>
+</html>
